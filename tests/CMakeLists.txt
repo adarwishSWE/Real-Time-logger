@@ -12,6 +12,7 @@ add_executable(rt-logger-tests)
 target_sources(rt-logger-tests PRIVATE
     log_level_test.cpp
     log_entry_test.cpp
+    mpsc_ring_test.cpp
 )
 
 target_compile_features(rt-logger-tests PRIVATE cxx_std_23)
