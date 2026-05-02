@@ -1,3 +1,7 @@
+// Component under test: MpscRing<N>
+// Covers: lock-free try_push/try_pop, FIFO ordering, multi-producer contention,
+//         blocking push via condition_variable, shutdown semantics, ring wrapping
+
 #include <rt-logger/mpsc_ring.h>
 
 #include <gtest/gtest.h>
@@ -14,42 +18,67 @@ LogEntry make_entry(int line = 0, LogLevel level = LogLevel::INFO) {
     return e;
 }
 
-TEST(MpscRing, SingleProducerPushPop) {
+class MpscRingTest : public ::testing::Test {};
+
+// a single producer can push a LogEntry and pop it back
+TEST_F(MpscRingTest, SingleProducerPushPop)
+{
+    // Given
     MpscRing<4> ring;
     auto entry = make_entry(0, LogLevel::INFO);
 
+    // When
     EXPECT_TRUE(ring.try_push(entry).has_value());
-
     auto popped = ring.try_pop();
+
+    // Then
     EXPECT_TRUE(popped.has_value());
     EXPECT_EQ(popped->level, LogLevel::INFO);
 }
 
-TEST(MpscRing, TryPopEmptyReturnsNullopt) {
+// try_pop() on an empty ring returns std::nullopt
+TEST_F(MpscRingTest, TryPopEmptyReturnsNullopt)
+{
+    // Given
     MpscRing<4> ring;
-    EXPECT_FALSE(ring.try_pop().has_value());
+
+    // When
+    auto result = ring.try_pop();
+
+    // Then
+    EXPECT_FALSE(result.has_value());
 }
 
-TEST(MpscRing, TryPushFullReturnsFull) {
+// try_push() returns RingError::FULL when the ring is at capacity
+TEST_F(MpscRingTest, TryPushFullReturnsFull)
+{
+    // Given
     MpscRing<4> ring;
     auto entry = make_entry();
 
+    // When
     for (int i = 0; i < 4; ++i) {
         EXPECT_TRUE(ring.try_push(entry).has_value());
     }
-
     auto result = ring.try_push(entry);
+
+    // Then
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), RingError::FULL);
 }
 
-TEST(MpscRing, FifoOrdering) {
+// entries are popped in the same order they were pushed
+TEST_F(MpscRingTest, FifoOrdering)
+{
+    // Given
     MpscRing<4> ring;
 
+    // When
     for (int i = 0; i < 3; ++i) {
         EXPECT_TRUE(ring.try_push(make_entry(i)).has_value());
     }
 
+    // Then
     for (int i = 0; i < 3; ++i) {
         auto popped = ring.try_pop();
         ASSERT_TRUE(popped.has_value());
@@ -57,13 +86,16 @@ TEST(MpscRing, FifoOrdering) {
     }
 }
 
-TEST(MpscRing, MultiProducerContention) {
+// multiple producers can push concurrently without data loss
+TEST_F(MpscRingTest, MultiProducerContention)
+{
+    // Given
     constexpr int kNumProducers = 4;
     constexpr int kItemsPerProducer = 100;
     constexpr int kTotalItems = kNumProducers * kItemsPerProducer;
-
     MpscRing<256> ring;
 
+    // When
     std::vector<std::jthread> producers;
     for (int t = 0; t < kNumProducers; ++t) {
         producers.emplace_back([&ring, t] {
@@ -89,42 +121,46 @@ TEST(MpscRing, MultiProducerContention) {
         }
     }
 
+    // Then
     EXPECT_EQ(count, kTotalItems);
 }
 
-TEST(MpscRing, BlockingPushWaitsForSpace) {
+// push() blocks when the ring is full and unblocks when space is freed
+TEST_F(MpscRingTest, BlockingPushWaitsForSpace)
+{
+    // Given
     MpscRing<2> ring;
     auto entry = make_entry();
-
     EXPECT_TRUE(ring.try_push(entry).has_value());
     EXPECT_TRUE(ring.try_push(entry).has_value());
 
     std::atomic<bool> pushed{false};
-
     std::jthread pusher([&ring, &pushed] {
         auto result = ring.push(make_entry());
         EXPECT_TRUE(result.has_value());
         pushed.store(true, std::memory_order_release);
     });
 
-    // Give pusher time to block
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_FALSE(pushed.load(std::memory_order_acquire));
 
+    // When
     auto __ = ring.try_pop();
     (void)__;
 
-    // Wait for pusher to complete
+    // Then
     while (!pushed.load(std::memory_order_acquire)) {
         std::this_thread::yield();
     }
     EXPECT_TRUE(pushed.load(std::memory_order_acquire));
 }
 
-TEST(MpscRing, BlockingPushNotifiesMultipleWaiters) {
+// push() serialises waiters so only one wakes per free slot
+TEST_F(MpscRingTest, BlockingPushNotifiesMultipleWaiters)
+{
+    // Given
     MpscRing<1> ring;
     auto entry = make_entry();
-
     EXPECT_TRUE(ring.try_push(entry).has_value());
 
     std::atomic<int> pushed_count{0};
@@ -145,28 +181,32 @@ TEST(MpscRing, BlockingPushNotifiesMultipleWaiters) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    // Pop one — only one pusher should wake
+    // When — pop one, only one pusher should wake
     auto popped1 = ring.try_pop();
     EXPECT_TRUE(popped1.has_value());
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    // Wait for first pusher
+    // Then
     while (pushed_count.load(std::memory_order_acquire) < 1) {
         std::this_thread::yield();
     }
     EXPECT_EQ(pushed_count.load(std::memory_order_acquire), 1);
 
-    // Now pop again to free space for second pusher
+    // When — pop again to free space for second pusher
     auto popped2 = ring.try_pop();
     EXPECT_TRUE(popped2.has_value());
 
+    // Then
     while (pushed_count.load(std::memory_order_acquire) < 2) {
         std::this_thread::yield();
     }
     EXPECT_EQ(pushed_count.load(std::memory_order_acquire), 2);
 }
 
-TEST(MpscRing, ShutdownWakesblockingPush) {
+// shutdown() wakes a blocked push() which then returns RingError::SHUTDOWN
+TEST_F(MpscRingTest, ShutdownWakesblockingPush)
+{
+    // Given
     MpscRing<1> ring;
     EXPECT_TRUE(ring.try_push(make_entry()).has_value());
 
@@ -181,47 +221,68 @@ TEST(MpscRing, ShutdownWakesblockingPush) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_FALSE(push_returned.load(std::memory_order_acquire));
 
+    // When
     ring.shutdown();
 
+    // Then
     while (!push_returned.load(std::memory_order_acquire)) {
         std::this_thread::yield();
     }
     EXPECT_TRUE(push_returned.load(std::memory_order_acquire));
 }
 
-TEST(MpscRing, TryPushAfterShutdown) {
+// try_push() returns RingError::SHUTDOWN after shutdown()
+TEST_F(MpscRingTest, TryPushAfterShutdown)
+{
+    // Given
     MpscRing<4> ring;
     ring.shutdown();
 
+    // When
     auto result = ring.try_push(make_entry());
+
+    // Then
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), RingError::SHUTDOWN);
 }
 
-TEST(MpscRing, PushAfterShutdown) {
+// push() returns RingError::SHUTDOWN after shutdown()
+TEST_F(MpscRingTest, PushAfterShutdown)
+{
+    // Given
     MpscRing<4> ring;
     ring.shutdown();
 
+    // When
     auto result = ring.push(make_entry());
+
+    // Then
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), RingError::SHUTDOWN);
 }
 
-TEST(MpscRing, TryPopStillWorksAfterShutdown) {
+// try_pop() continues to drain entries after shutdown()
+TEST_F(MpscRingTest, TryPopStillWorksAfterShutdown)
+{
+    // Given
     MpscRing<4> ring;
     auto entry = make_entry(42, LogLevel::INFO);
-
     EXPECT_TRUE(ring.try_push(entry).has_value());
-
     ring.shutdown();
 
+    // When
     auto popped = ring.try_pop();
+
+    // Then
     EXPECT_TRUE(popped.has_value());
     EXPECT_EQ(popped->level, LogLevel::INFO);
     EXPECT_EQ(popped->source_loc.line, 42);
 }
 
-TEST(MpscRing, ShutdownWakesMultipleBlockedPushers) {
+// shutdown() notifies all blocked pushers via notify_all()
+TEST_F(MpscRingTest, ShutdownWakesMultipleBlockedPushers)
+{
+    // Given
     MpscRing<2> ring;
     auto entry = make_entry();
     EXPECT_TRUE(ring.try_push(entry).has_value());
@@ -242,17 +303,23 @@ TEST(MpscRing, ShutdownWakesMultipleBlockedPushers) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
+    // When
     ring.shutdown();
 
+    // Then
     while (shutdown_count.load(std::memory_order_acquire) < 3) {
         std::this_thread::yield();
     }
     EXPECT_EQ(shutdown_count.load(std::memory_order_acquire), 3);
 }
 
-TEST(MpscRing, RingWrappingPreservesData) {
+// data survives multiple wrap-around cycles of the ring buffer
+TEST_F(MpscRingTest, RingWrappingPreservesData)
+{
+    // Given
     MpscRing<4> ring;
 
+    // When / Then — 3 full cycles of fill → drain
     for (int cycle = 0; cycle < 3; ++cycle) {
         for (int i = 0; i < 4; ++i) {
             EXPECT_TRUE(ring.try_push(make_entry(cycle * 10 + i)).has_value());
@@ -267,16 +334,21 @@ TEST(MpscRing, RingWrappingPreservesData) {
     }
 }
 
-TEST(MpscRing, MinimumRingSize) {
+// the ring operates correctly with the minimum capacity N=1
+TEST_F(MpscRingTest, MinimumRingSize)
+{
+    // Given
     MpscRing<1> ring;
     auto entry = make_entry(0, LogLevel::WARN);
 
+    // When
     EXPECT_TRUE(ring.try_push(entry).has_value());
     EXPECT_FALSE(ring.try_push(make_entry()).has_value());
 
     auto popped = ring.try_pop();
     ASSERT_TRUE(popped.has_value());
-    EXPECT_EQ(popped->level, LogLevel::WARN);
 
+    // Then
+    EXPECT_EQ(popped->level, LogLevel::WARN);
     EXPECT_FALSE(ring.try_pop().has_value());
 }

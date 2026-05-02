@@ -1,3 +1,6 @@
+// Component under test: LogLevel
+// Covers: to_string() conversion for all log levels, operator<< output
+
 #include <rt-logger/log_level.h>
 
 #include <gtest/gtest.h>
@@ -5,7 +8,15 @@
 
 using namespace rtlog;
 
-TEST(LogLevel, ToStringAllLevels) {
+class LogLevelTest : public ::testing::Test {};
+
+// to_string() returns the correct string for every log level
+TEST_F(LogLevelTest, ToStringAllLevels)
+{
+    // Given
+    // (enums are compile-time constants)
+
+    // When / Then
     EXPECT_EQ(to_string(LogLevel::TRACE), "TRACE");
     EXPECT_EQ(to_string(LogLevel::DEBUG), "DEBUG");
     EXPECT_EQ(to_string(LogLevel::INFO), "INFO");
@@ -14,8 +25,15 @@ TEST(LogLevel, ToStringAllLevels) {
     EXPECT_EQ(to_string(LogLevel::FATAL), "FATAL");
 }
 
-TEST(LogLevel, OstreamOperator) {
+// operator<< writes the level name to an output stream
+TEST_F(LogLevelTest, OstreamOperator)
+{
+    // Given
     std::ostringstream oss;
+
+    // When
     oss << LogLevel::WARN;
+
+    // Then
     EXPECT_EQ(oss.str(), "WARN");
 }
