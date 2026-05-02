@@ -14,6 +14,11 @@ public:
     [[nodiscard]] static std::unique_ptr<ILogWriter> create(std::string_view filepath);
 
     FileWriter() = default;
+    ~FileWriter() override = default;
+    FileWriter(const FileWriter&) = delete;
+    FileWriter& operator=(const FileWriter&) = delete;
+    FileWriter(FileWriter&&) = delete;
+    FileWriter& operator=(FileWriter&&) = delete;
 
     explicit FileWriter(std::ostream& stream);
 
