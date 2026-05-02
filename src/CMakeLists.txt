@@ -1,5 +1,7 @@
 add_library(rt-logger STATIC
-    placeholder.cpp
+    console_writer.cpp
+    file_writer.cpp
+    broadcast_writer.cpp
 )
 
 target_compile_features(rt-logger PUBLIC cxx_std_23)
