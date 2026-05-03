@@ -16,6 +16,9 @@ Makefile
 *.exe
 *.out
 
+# CTest artifacts
+Testing/
+
 # IDE / editor
 .vscode/
 .idea/

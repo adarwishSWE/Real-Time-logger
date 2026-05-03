@@ -15,6 +15,7 @@ target_sources(rt-logger-tests PRIVATE
     mpsc_ring_test.cpp
     file_writer_test.cpp
     broadcast_writer_test.cpp
+    logger_test.cpp
 )
 
 target_compile_features(rt-logger-tests PRIVATE cxx_std_23)
