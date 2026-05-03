@@ -20,7 +20,9 @@ namespace rtlog {
 class ILogger {
 public:
     ILogger() = default;
+    // LCOV_EXCL_START — deleting destructor of abstract class is structurally unreachable
     virtual ~ILogger() = default;
+    // LCOV_EXCL_STOP
     ILogger(const ILogger&) = delete;
     ILogger& operator=(const ILogger&) = delete;
     ILogger(ILogger&&) = delete;

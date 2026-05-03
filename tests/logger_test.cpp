@@ -244,3 +244,49 @@ TEST_F(LoggerTest, MultiThreadedLogging)
     // Then — all 40 messages should have been written
     EXPECT_GE(write_count.load(std::memory_order_acquire), 40);
 }
+
+// format_entry truncates when the combined fields exceed the 512-byte buffer
+TEST_F(LoggerTest, FormatTruncatesOnOverflow)
+{
+    // Given
+    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(1));
+    auto logger = make_logger(LogLevel::INFO);
+
+    std::string long_file(300, 'f');
+    std::string long_func(300, 'g');
+    std::string long_msg(100, 'm');
+
+    // When
+    auto result = logger->log(LogLevel::INFO, long_msg,
+                              {long_file.c_str(), 1, long_func.c_str()});
+
+    // Then
+    EXPECT_TRUE(result.has_value());
+
+    logger->shutdown();
+}
+
+// drain loop handles write errors gracefully and counts them
+TEST_F(LoggerTest, DrainHandlesWriteErrors)
+{
+    // Given
+    std::atomic<int> call_count{0};
+    EXPECT_CALL(*writer_ptr_, write(_))
+        .Times(testing::AtLeast(3))
+        .WillRepeatedly(Invoke([&call_count](std::string_view) -> std::expected<void, WriteError> {
+            if (call_count.fetch_add(1) < 3) {
+                return std::unexpected(WriteError::WRITE_FAILED);
+            }
+            return {};
+        }));
+    auto logger = make_logger(LogLevel::INFO);
+
+    // When
+    logger->log(LogLevel::INFO, "msg1", {"test.cpp", 1, "f"});
+    logger->log(LogLevel::INFO, "msg2", {"test.cpp", 2, "f"});
+    logger->log(LogLevel::INFO, "msg3", {"test.cpp", 3, "f"});
+    logger->shutdown();
+
+    // Then
+    EXPECT_GE(logger->write_error_count(), 3u);
+}

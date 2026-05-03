@@ -352,3 +352,98 @@ TEST_F(MpscRingTest, MinimumRingSize)
     EXPECT_EQ(popped->level, LogLevel::WARN);
     EXPECT_FALSE(ring.try_pop().has_value());
 }
+
+// push() blocks on a large ring until space is freed
+TEST_F(MpscRingTest, PushBlocksOnSize256)
+{
+    // Given
+    MpscRing<256> ring;
+    auto entry = make_entry();
+    for (int i = 0; i < 256; ++i) {
+        EXPECT_TRUE(ring.try_push(entry).has_value());
+    }
+
+    std::atomic<bool> pushed{false};
+    std::jthread pusher([&ring, &pushed] {
+        auto result = ring.push(make_entry());
+        EXPECT_TRUE(result.has_value());
+        pushed.store(true, std::memory_order_release);
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    EXPECT_FALSE(pushed.load(std::memory_order_acquire));
+
+    // When
+    auto popped = ring.try_pop();
+    EXPECT_TRUE(popped.has_value());
+
+    // Then
+    while (!pushed.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+    EXPECT_TRUE(pushed.load(std::memory_order_acquire));
+
+    ring.shutdown();
+}
+
+// push() blocks on a medium ring until space is freed
+TEST_F(MpscRingTest, PushBlocksOnSize64)
+{
+    // Given
+    MpscRing<64> ring;
+    auto entry = make_entry();
+    for (int i = 0; i < 64; ++i) {
+        EXPECT_TRUE(ring.try_push(entry).has_value());
+    }
+
+    std::atomic<bool> pushed{false};
+    std::jthread pusher([&ring, &pushed] {
+        auto result = ring.push(make_entry());
+        EXPECT_TRUE(result.has_value());
+        pushed.store(true, std::memory_order_release);
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    EXPECT_FALSE(pushed.load(std::memory_order_acquire));
+
+    // When
+    auto popped = ring.try_pop();
+    EXPECT_TRUE(popped.has_value());
+
+    // Then
+    while (!pushed.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+    EXPECT_TRUE(pushed.load(std::memory_order_acquire));
+}
+
+// push() blocks on a small ring until space is freed
+TEST_F(MpscRingTest, PushBlocksOnSize4)
+{
+    // Given
+    MpscRing<4> ring;
+    auto entry = make_entry();
+    for (int i = 0; i < 4; ++i) {
+        EXPECT_TRUE(ring.try_push(entry).has_value());
+    }
+
+    std::atomic<bool> pushed{false};
+    std::jthread pusher([&ring, &pushed] {
+        auto result = ring.push(make_entry());
+        EXPECT_TRUE(result.has_value());
+        pushed.store(true, std::memory_order_release);
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    EXPECT_FALSE(pushed.load(std::memory_order_acquire));
+
+    // When
+    auto popped = ring.try_pop();
+    EXPECT_TRUE(popped.has_value());
+
+    // Then
+    while (!pushed.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+    EXPECT_TRUE(pushed.load(std::memory_order_acquire));
+}

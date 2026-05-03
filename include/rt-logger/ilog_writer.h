@@ -16,7 +16,9 @@ namespace rtlog {
  */
 class ILogWriter {
 public:
+    // LCOV_EXCL_START — deleting destructor of abstract class is structurally unreachable
     virtual ~ILogWriter() = default;
+    // LCOV_EXCL_STOP
     ILogWriter(const ILogWriter&) = delete;
     ILogWriter& operator=(const ILogWriter&) = delete;
     ILogWriter(ILogWriter&&) = delete;

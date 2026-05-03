@@ -139,3 +139,14 @@ TEST_F(BroadcastWriterTest, SingleWriterSucceeds)
     // Then
     EXPECT_TRUE(result.has_value());
 }
+
+// heap-allocated BroadcastWriter destroyed through ILogWriter base pointer
+TEST_F(BroadcastWriterTest, HeapAllocatedDestroysViaBasePointer)
+{
+    // Given
+    std::vector<std::unique_ptr<ILogWriter>> writers;
+
+    // When / Then — destruction via unique_ptr<ILogWriter> invokes deleting destructor
+    std::unique_ptr<ILogWriter> bw =
+        std::make_unique<BroadcastWriter>(std::move(writers));
+}

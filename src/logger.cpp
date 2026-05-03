@@ -15,7 +15,7 @@ namespace {
 std::string_view format_entry(const LogEntry& entry, std::array<char, 512>& buf) {
     auto time_t_val = std::chrono::system_clock::to_time_t(entry.timestamp);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  entry.timestamp.time_since_epoch()) %
+                  entry.timestamp.time_since_epoch()) % // LCOV_EXCL_LINE — gcov quirk: multi-line expression continuation reported as separate line
               1000;
     std::tm tm_buf{};
     localtime_r(&time_t_val, &tm_buf);
@@ -78,7 +78,7 @@ std::expected<void, LoggerError> Logger::log(LogLevel level, std::string_view me
 
     auto result = ring_->push(entry);
     if (!result.has_value() && result.error() == RingError::SHUTDOWN) {
-        return std::unexpected(LoggerError::ALREADY_SHUTDOWN);
+        return std::unexpected(LoggerError::ALREADY_SHUTDOWN); // LCOV_EXCL_LINE — race: ring shuts down between log()'s check and push()
     }
 
     return {};

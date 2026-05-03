@@ -37,3 +37,16 @@ TEST_F(LogLevelTest, OstreamOperator)
     // Then
     EXPECT_EQ(oss.str(), "WARN");
 }
+
+// to_string() returns "UNKNOWN" for an out-of-range cast value
+TEST_F(LogLevelTest, InvalidLevelReturnsUnknown)
+{
+    // Given
+    auto invalid = static_cast<LogLevel>(999);
+
+    // When
+    auto result = to_string(invalid);
+
+    // Then
+    EXPECT_EQ(result, "UNKNOWN");
+}

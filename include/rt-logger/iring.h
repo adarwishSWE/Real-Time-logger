@@ -17,7 +17,9 @@ namespace rtlog {
  */
 class IRing {
 public:
+    // LCOV_EXCL_START — deleting destructor of abstract class is structurally unreachable
     virtual ~IRing() = default;
+    // LCOV_EXCL_STOP
     IRing(const IRing&) = delete;
     IRing& operator=(const IRing&) = delete;
     IRing(IRing&&) = delete;

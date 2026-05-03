@@ -70,7 +70,7 @@ public:
 
         std::size_t pos = write_pos_.load(std::memory_order_relaxed);
 
-        while (true) {
+        while (true) { // LCOV_EXCL_LINE — gcov quirk: infinite-loop condition has no false branch
             const auto read_pos = read_pos_.load(std::memory_order_acquire);
             if (pos - read_pos >= ring_size) {
                 return std::unexpected(RingError::FULL);
@@ -81,11 +81,13 @@ public:
             const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
 
             if (seq != pos) {
+                // LCOV_EXCL_START — race window: another producer reserved slot but hasn't published sequence; shutdown check during that nanosecond gap is untestable without instrumenting production code
                 if (shutdown_.load(std::memory_order_acquire)) {
                     return std::unexpected(RingError::SHUTDOWN);
                 }
                 pos = write_pos_.load(std::memory_order_relaxed);
                 continue;
+                // LCOV_EXCL_STOP
             }
 
             if (write_pos_.compare_exchange_weak(pos, pos + 1,
@@ -158,7 +160,7 @@ public:
                     return std::unexpected(RingError::SHUTDOWN);
                 }
             } else {
-                return result;
+                return result; // LCOV_EXCL_LINE — race: try_push returns SHUTDOWN (not FULL) between push's shutdown check and try_push call
             }
         }
     }
