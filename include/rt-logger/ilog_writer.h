@@ -7,6 +7,13 @@
 
 namespace rtlog {
 
+/**
+ * @brief Abstract interface for log output destinations.
+ *
+ * Implementations write formatted log lines to specific targets
+ * (console, file, network, etc.). All write operations must be
+ * thread-safe if shared across threads.
+ */
 class ILogWriter {
 public:
     virtual ~ILogWriter() = default;
@@ -15,6 +22,12 @@ public:
     ILogWriter(ILogWriter&&) = delete;
     ILogWriter& operator=(ILogWriter&&) = delete;
 
+    /**
+     * @brief Write a formatted log line to the output destination.
+     *
+     * @param message The fully formatted log line (including newline).
+     * @return Success, or a WriteError on failure.
+     */
     [[nodiscard]] virtual std::expected<void, WriteError> write(std::string_view message) noexcept = 0;
 
 protected:

@@ -14,6 +14,16 @@
 
 namespace rtlog {
 
+/**
+ * @brief Lock-free multi-producer, single-consumer ring buffer.
+ *
+ * Supports multiple concurrent producers via CAS-based slot reservation
+ * and a single consumer via try_pop. Provides both non-blocking try_push
+ * and blocking push (with condition variable) operations. Shutdown
+ * wakes all blocked producers with RingError::SHUTDOWN.
+ *
+ * @tparam ring_size Number of slots; must be a power of 2.
+ */
 template <std::size_t ring_size>
 class MpscRing : public IRing {
     static_assert((ring_size & (ring_size - 1)) == 0, "ring_size must be power of 2");
@@ -33,6 +43,7 @@ class MpscRing : public IRing {
     std::condition_variable push_cv_;
 
 public:
+    /** @brief Construct an empty ring buffer with all slots initialized. */
     MpscRing() noexcept {
         for (std::size_t i = 0; i < ring_size; ++i) {
             buffer_[i].sequence.store(i, std::memory_order_relaxed);
@@ -44,6 +55,14 @@ public:
     MpscRing(MpscRing&&) = delete;
     MpscRing& operator=(MpscRing&&) = delete;
 
+    /**
+     * @brief Attempt to push an entry without blocking. Thread-safe.
+     *
+     * Uses lock-free CAS slot reservation for concurrent producers.
+     *
+     * @param entry The log entry to enqueue.
+     * @return Success, or RingError::FULL/RingError::SHUTDOWN.
+     */
     [[nodiscard]] std::expected<void, RingError> try_push(const LogEntry& entry) noexcept override {
         if (shutdown_.load(std::memory_order_acquire)) {
             return std::unexpected(RingError::SHUTDOWN);
@@ -79,6 +98,11 @@ public:
         }
     }
 
+    /**
+     * @brief Attempt to pop an entry. Single-consumer only.
+     *
+     * @return The popped LogEntry, or std::nullopt if empty.
+     */
     [[nodiscard]] std::optional<LogEntry> try_pop() noexcept override {
         const auto pos = read_pos_.load(std::memory_order_relaxed);
         const auto index = pos & mask;
@@ -98,6 +122,15 @@ public:
         return entry;
     }
 
+    /**
+     * @brief Push an entry, blocking until space is available. Thread-safe.
+     *
+     * Blocks on a condition variable when the ring is full. Returns
+     * RingError::SHUTDOWN immediately if shutdown() has been called.
+     *
+     * @param entry The log entry to enqueue.
+     * @return Success, or RingError::SHUTDOWN.
+     */
     [[nodiscard]] std::expected<void, RingError> push(const LogEntry& entry) override {
         std::unique_lock lock(push_mutex_);
 
@@ -130,6 +163,13 @@ public:
         }
     }
 
+    /**
+     * @brief Signal shutdown to all blocked producers. Idempotent.
+     *
+     * Wakes all threads blocked in push() via notify_all().
+     * After shutdown, try_push/push return RingError::SHUTDOWN.
+     * try_pop() continues to drain remaining entries.
+     */
     void shutdown() noexcept override {
         shutdown_.store(true, std::memory_order_release);
         push_cv_.notify_all();
