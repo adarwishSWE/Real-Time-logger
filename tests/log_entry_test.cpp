@@ -12,8 +12,7 @@ class LogEntryTest : public ::testing::Test {};
 class SourceLocTest : public ::testing::Test {};
 
 // value-initialized LogEntry has zeroed members
-TEST_F(LogEntryTest, DefaultConstruction)
-{
+TEST_F(LogEntryTest, DefaultConstruction) {
     // Given
     LogEntry entry{};
 
@@ -23,8 +22,7 @@ TEST_F(LogEntryTest, DefaultConstruction)
 }
 
 // aggregate-initialized LogEntry preserves all fields
-TEST_F(LogEntryTest, AggregateInitialization)
-{
+TEST_F(LogEntryTest, AggregateInitialization) {
     // Given
     auto now = std::chrono::system_clock::now();
 
@@ -40,8 +38,7 @@ TEST_F(LogEntryTest, AggregateInitialization)
 }
 
 // SourceLoc fields are correctly aggregate-initialized
-TEST_F(SourceLocTest, Fields)
-{
+TEST_F(SourceLocTest, Fields) {
     // Given
     SourceLoc loc{"test.cpp", 10, "bar"};
 

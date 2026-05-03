@@ -15,8 +15,7 @@ using namespace rtlog;
 class FileWriterTest : public ::testing::Test {};
 
 // write() appends the message and a newline to the injected stream
-TEST_F(FileWriterTest, WriteToStreamSucceeds)
-{
+TEST_F(FileWriterTest, WriteToStreamSucceeds) {
     // Given
     std::ostringstream oss;
     FileWriter writer(oss);
@@ -30,8 +29,7 @@ TEST_F(FileWriterTest, WriteToStreamSucceeds)
 }
 
 // multiple writes accumulate in the stream with newline separators
-TEST_F(FileWriterTest, WriteMultipleMessages)
-{
+TEST_F(FileWriterTest, WriteMultipleMessages) {
     // Given
     std::ostringstream oss;
     FileWriter writer(oss);
@@ -45,8 +43,7 @@ TEST_F(FileWriterTest, WriteMultipleMessages)
 }
 
 // write() returns WriteError::WRITE_FAILED when the stream is in a failed state
-TEST_F(FileWriterTest, WriteToFailedStream)
-{
+TEST_F(FileWriterTest, WriteToFailedStream) {
     // Given
     std::ostringstream oss;
     oss.setstate(std::ios::failbit);
@@ -61,8 +58,7 @@ TEST_F(FileWriterTest, WriteToFailedStream)
 }
 
 // create() returns nullptr when the file path does not exist
-TEST_F(FileWriterTest, CreateReturnsNullptrForBadPath)
-{
+TEST_F(FileWriterTest, CreateReturnsNullptrForBadPath) {
     // Given
     // (bad path is hardcoded)
 
@@ -74,10 +70,10 @@ TEST_F(FileWriterTest, CreateReturnsNullptrForBadPath)
 }
 
 // create() opens a file for append and write() persists the message
-TEST_F(FileWriterTest, CreateAndWriteToRealFile)
-{
+TEST_F(FileWriterTest, CreateAndWriteToRealFile) {
     // Given
-    const std::filesystem::path test_file = std::filesystem::temp_directory_path() / "rt_logger_test.txt";
+    const std::filesystem::path test_file =
+        std::filesystem::temp_directory_path() / "rt_logger_test.txt";
 
     // When
     auto writer = FileWriter::create(test_file.string());

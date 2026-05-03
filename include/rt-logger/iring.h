@@ -20,10 +20,10 @@ public:
     // LCOV_EXCL_START — deleting destructor of abstract class is structurally unreachable
     virtual ~IRing() = default;
     // LCOV_EXCL_STOP
-    IRing(const IRing&) = delete;
+    IRing(const IRing&)            = delete;
     IRing& operator=(const IRing&) = delete;
-    IRing(IRing&&) = delete;
-    IRing& operator=(IRing&&) = delete;
+    IRing(IRing&&)                 = delete;
+    IRing& operator=(IRing&&)      = delete;
 
     /**
      * @brief Attempt to push an entry without blocking.
@@ -32,7 +32,8 @@ public:
      * @return Success, or RingError::FULL if the ring is at capacity,
      *         or RingError::SHUTDOWN if the ring has been shut down.
      */
-    [[nodiscard]] virtual std::expected<void, RingError> try_push(const LogEntry& entry) noexcept = 0;
+    [[nodiscard]] virtual std::expected<void, RingError>
+    try_push(const LogEntry& entry) noexcept = 0;
 
     /**
      * @brief Attempt to pop an entry from the ring.
@@ -67,4 +68,4 @@ protected:
     IRing() = default;
 };
 
-} // namespace rtlog
+}  // namespace rtlog

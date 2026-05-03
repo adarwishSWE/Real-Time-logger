@@ -22,11 +22,11 @@ public:
      */
     explicit BroadcastWriter(std::vector<std::unique_ptr<ILogWriter>> writers);
 
-    ~BroadcastWriter() override = default;
-    BroadcastWriter(const BroadcastWriter&) = delete;
+    ~BroadcastWriter() override                        = default;
+    BroadcastWriter(const BroadcastWriter&)            = delete;
     BroadcastWriter& operator=(const BroadcastWriter&) = delete;
-    BroadcastWriter(BroadcastWriter&&) = default;
-    BroadcastWriter& operator=(BroadcastWriter&&) = default;
+    BroadcastWriter(BroadcastWriter&&)                 = default;
+    BroadcastWriter& operator=(BroadcastWriter&&)      = default;
 
     /**
      * @brief Write the message to every writer in order.
@@ -43,4 +43,4 @@ private:
     std::vector<std::unique_ptr<ILogWriter>> writers_;
 };
 
-} // namespace rtlog
+}  // namespace rtlog

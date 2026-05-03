@@ -33,7 +33,8 @@ public:
      * @param writer  Ownership of the initial output writer.
      * @param level   Minimum log level (messages below this are discarded).
      */
-    Logger(std::unique_ptr<IRing> ring, std::unique_ptr<ILogWriter> writer,
+    Logger(std::unique_ptr<IRing> ring,
+           std::unique_ptr<ILogWriter> writer,
            LogLevel level = LogLevel::INFO);
 
     /**
@@ -41,10 +42,10 @@ public:
      */
     ~Logger() override;
 
-    Logger(const Logger&) = delete;
+    Logger(const Logger&)            = delete;
     Logger& operator=(const Logger&) = delete;
-    Logger(Logger&&) = delete;
-    Logger& operator=(Logger&&) = delete;
+    Logger(Logger&&)                 = delete;
+    Logger& operator=(Logger&&)      = delete;
 
     /**
      * @brief Submit a log entry. Thread-safe.
@@ -57,8 +58,8 @@ public:
      * @param source_loc Source location (file, line, function).
      * @return Success, or LoggerError::ALREADY_SHUTDOWN.
      */
-    [[nodiscard]] std::expected<void, LoggerError> log(LogLevel level, std::string_view message,
-                                                       const SourceLoc& source_loc) noexcept override;
+    [[nodiscard]] std::expected<void, LoggerError>
+    log(LogLevel level, std::string_view message, const SourceLoc& source_loc) noexcept override;
 
     /**
      * @brief Change the minimum log level. Thread-safe.
@@ -107,4 +108,4 @@ private:
     void run(std::stop_token st);
 };
 
-} // namespace rtlog
+}  // namespace rtlog

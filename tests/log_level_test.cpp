@@ -11,8 +11,7 @@ using namespace rtlog;
 class LogLevelTest : public ::testing::Test {};
 
 // to_string() returns the correct string for every log level
-TEST_F(LogLevelTest, ToStringAllLevels)
-{
+TEST_F(LogLevelTest, ToStringAllLevels) {
     // Given
     // (enums are compile-time constants)
 
@@ -26,8 +25,7 @@ TEST_F(LogLevelTest, ToStringAllLevels)
 }
 
 // operator<< writes the level name to an output stream
-TEST_F(LogLevelTest, OstreamOperator)
-{
+TEST_F(LogLevelTest, OstreamOperator) {
     // Given
     std::ostringstream oss;
 
@@ -39,8 +37,7 @@ TEST_F(LogLevelTest, OstreamOperator)
 }
 
 // to_string() returns "UNKNOWN" for an out-of-range cast value
-TEST_F(LogLevelTest, InvalidLevelReturnsUnknown)
-{
+TEST_F(LogLevelTest, InvalidLevelReturnsUnknown) {
     // Given
     auto invalid = static_cast<LogLevel>(999);
 

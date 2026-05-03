@@ -14,8 +14,7 @@ std::unique_ptr<ILogWriter> FileWriter::create(std::string_view filepath) {
     return writer;
 }
 
-FileWriter::FileWriter(std::ostream& stream)
-    : stream_(&stream) {}
+FileWriter::FileWriter(std::ostream& stream) : stream_(&stream) {}
 
 std::expected<void, WriteError> FileWriter::write(std::string_view message) noexcept {
     assert(stream_ != nullptr);
@@ -28,4 +27,4 @@ std::expected<void, WriteError> FileWriter::write(std::string_view message) noex
     return {};
 }
 
-} // namespace rtlog
+}  // namespace rtlog

@@ -14,15 +14,14 @@ using namespace rtlog;
 LogEntry make_entry(int line = 0, LogLevel level = LogLevel::INFO) {
     LogEntry e{};
     e.source_loc.line = line;
-    e.level = level;
+    e.level           = level;
     return e;
 }
 
 class MpscRingTest : public ::testing::Test {};
 
 // a single producer can push a LogEntry and pop it back
-TEST_F(MpscRingTest, SingleProducerPushPop)
-{
+TEST_F(MpscRingTest, SingleProducerPushPop) {
     // Given
     MpscRing<4> ring;
     auto entry = make_entry(0, LogLevel::INFO);
@@ -37,8 +36,7 @@ TEST_F(MpscRingTest, SingleProducerPushPop)
 }
 
 // try_pop() on an empty ring returns std::nullopt
-TEST_F(MpscRingTest, TryPopEmptyReturnsNullopt)
-{
+TEST_F(MpscRingTest, TryPopEmptyReturnsNullopt) {
     // Given
     MpscRing<4> ring;
 
@@ -50,8 +48,7 @@ TEST_F(MpscRingTest, TryPopEmptyReturnsNullopt)
 }
 
 // try_push() returns RingError::FULL when the ring is at capacity
-TEST_F(MpscRingTest, TryPushFullReturnsFull)
-{
+TEST_F(MpscRingTest, TryPushFullReturnsFull) {
     // Given
     MpscRing<4> ring;
     auto entry = make_entry();
@@ -68,8 +65,7 @@ TEST_F(MpscRingTest, TryPushFullReturnsFull)
 }
 
 // entries are popped in the same order they were pushed
-TEST_F(MpscRingTest, FifoOrdering)
-{
+TEST_F(MpscRingTest, FifoOrdering) {
     // Given
     MpscRing<4> ring;
 
@@ -87,12 +83,11 @@ TEST_F(MpscRingTest, FifoOrdering)
 }
 
 // multiple producers can push concurrently without data loss
-TEST_F(MpscRingTest, MultiProducerContention)
-{
+TEST_F(MpscRingTest, MultiProducerContention) {
     // Given
-    constexpr int kNumProducers = 4;
+    constexpr int kNumProducers     = 4;
     constexpr int kItemsPerProducer = 100;
-    constexpr int kTotalItems = kNumProducers * kItemsPerProducer;
+    constexpr int kTotalItems       = kNumProducers * kItemsPerProducer;
     MpscRing<256> ring;
 
     // When
@@ -100,7 +95,7 @@ TEST_F(MpscRingTest, MultiProducerContention)
     for (int t = 0; t < kNumProducers; ++t) {
         producers.emplace_back([&ring, t] {
             for (int i = 0; i < kItemsPerProducer; ++i) {
-                auto entry = make_entry(t);
+                auto entry            = make_entry(t);
                 entry.source_loc.file = reinterpret_cast<const char*>(static_cast<uintptr_t>(i));
 
                 while (true) {
@@ -126,8 +121,7 @@ TEST_F(MpscRingTest, MultiProducerContention)
 }
 
 // push() blocks when the ring is full and unblocks when space is freed
-TEST_F(MpscRingTest, BlockingPushWaitsForSpace)
-{
+TEST_F(MpscRingTest, BlockingPushWaitsForSpace) {
     // Given
     MpscRing<2> ring;
     auto entry = make_entry();
@@ -156,8 +150,7 @@ TEST_F(MpscRingTest, BlockingPushWaitsForSpace)
 }
 
 // push() serialises waiters so only one wakes per free slot
-TEST_F(MpscRingTest, BlockingPushNotifiesMultipleWaiters)
-{
+TEST_F(MpscRingTest, BlockingPushNotifiesMultipleWaiters) {
     // Given
     MpscRing<1> ring;
     auto entry = make_entry();
@@ -204,8 +197,7 @@ TEST_F(MpscRingTest, BlockingPushNotifiesMultipleWaiters)
 }
 
 // shutdown() wakes a blocked push() which then returns RingError::SHUTDOWN
-TEST_F(MpscRingTest, ShutdownWakesblockingPush)
-{
+TEST_F(MpscRingTest, ShutdownWakesblockingPush) {
     // Given
     MpscRing<1> ring;
     EXPECT_TRUE(ring.try_push(make_entry()).has_value());
@@ -232,8 +224,7 @@ TEST_F(MpscRingTest, ShutdownWakesblockingPush)
 }
 
 // try_push() returns RingError::SHUTDOWN after shutdown()
-TEST_F(MpscRingTest, TryPushAfterShutdown)
-{
+TEST_F(MpscRingTest, TryPushAfterShutdown) {
     // Given
     MpscRing<4> ring;
     ring.shutdown();
@@ -247,8 +238,7 @@ TEST_F(MpscRingTest, TryPushAfterShutdown)
 }
 
 // push() returns RingError::SHUTDOWN after shutdown()
-TEST_F(MpscRingTest, PushAfterShutdown)
-{
+TEST_F(MpscRingTest, PushAfterShutdown) {
     // Given
     MpscRing<4> ring;
     ring.shutdown();
@@ -262,8 +252,7 @@ TEST_F(MpscRingTest, PushAfterShutdown)
 }
 
 // try_pop() continues to drain entries after shutdown()
-TEST_F(MpscRingTest, TryPopStillWorksAfterShutdown)
-{
+TEST_F(MpscRingTest, TryPopStillWorksAfterShutdown) {
     // Given
     MpscRing<4> ring;
     auto entry = make_entry(42, LogLevel::INFO);
@@ -280,8 +269,7 @@ TEST_F(MpscRingTest, TryPopStillWorksAfterShutdown)
 }
 
 // shutdown() notifies all blocked pushers via notify_all()
-TEST_F(MpscRingTest, ShutdownWakesMultipleBlockedPushers)
-{
+TEST_F(MpscRingTest, ShutdownWakesMultipleBlockedPushers) {
     // Given
     MpscRing<2> ring;
     auto entry = make_entry();
@@ -314,8 +302,7 @@ TEST_F(MpscRingTest, ShutdownWakesMultipleBlockedPushers)
 }
 
 // data survives multiple wrap-around cycles of the ring buffer
-TEST_F(MpscRingTest, RingWrappingPreservesData)
-{
+TEST_F(MpscRingTest, RingWrappingPreservesData) {
     // Given
     MpscRing<4> ring;
 
@@ -335,8 +322,7 @@ TEST_F(MpscRingTest, RingWrappingPreservesData)
 }
 
 // the ring operates correctly with the minimum capacity N=1
-TEST_F(MpscRingTest, MinimumRingSize)
-{
+TEST_F(MpscRingTest, MinimumRingSize) {
     // Given
     MpscRing<1> ring;
     auto entry = make_entry(0, LogLevel::WARN);
@@ -354,8 +340,7 @@ TEST_F(MpscRingTest, MinimumRingSize)
 }
 
 // push() blocks on a large ring until space is freed
-TEST_F(MpscRingTest, PushBlocksOnSize256)
-{
+TEST_F(MpscRingTest, PushBlocksOnSize256) {
     // Given
     MpscRing<256> ring;
     auto entry = make_entry();
@@ -387,8 +372,7 @@ TEST_F(MpscRingTest, PushBlocksOnSize256)
 }
 
 // push() blocks on a medium ring until space is freed
-TEST_F(MpscRingTest, PushBlocksOnSize64)
-{
+TEST_F(MpscRingTest, PushBlocksOnSize64) {
     // Given
     MpscRing<64> ring;
     auto entry = make_entry();
@@ -418,8 +402,7 @@ TEST_F(MpscRingTest, PushBlocksOnSize64)
 }
 
 // push() blocks on a small ring until space is freed
-TEST_F(MpscRingTest, PushBlocksOnSize4)
-{
+TEST_F(MpscRingTest, PushBlocksOnSize4) {
     // Given
     MpscRing<4> ring;
     auto entry = make_entry();

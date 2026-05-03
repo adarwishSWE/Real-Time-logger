@@ -18,8 +18,7 @@ using ::testing::Return;
 class BroadcastWriterTest : public ::testing::Test {};
 
 // write() fans out to every injected writer when all succeed
-TEST_F(BroadcastWriterTest, FanOutToAllWriters)
-{
+TEST_F(BroadcastWriterTest, FanOutToAllWriters) {
     // Given
     auto mock1 = std::make_unique<MockLogWriter>();
     auto mock2 = std::make_unique<MockLogWriter>();
@@ -50,8 +49,7 @@ TEST_F(BroadcastWriterTest, FanOutToAllWriters)
 }
 
 // write() short-circuits and returns the first error
-TEST_F(BroadcastWriterTest, ReturnsFirstError)
-{
+TEST_F(BroadcastWriterTest, ReturnsFirstError) {
     // Given
     auto mock1 = std::make_unique<MockLogWriter>();
     auto mock2 = std::make_unique<MockLogWriter>();
@@ -59,8 +57,7 @@ TEST_F(BroadcastWriterTest, ReturnsFirstError)
     EXPECT_CALL(*mock1, write(std::string_view("msg")))
         .Times(1)
         .WillOnce(Return(std::unexpected(WriteError::WRITE_FAILED)));
-    EXPECT_CALL(*mock2, write(std::string_view("msg")))
-        .Times(0);
+    EXPECT_CALL(*mock2, write(std::string_view("msg"))).Times(0);
 
     std::vector<std::unique_ptr<ILogWriter>> writers;
     writers.push_back(std::move(mock1));
@@ -77,8 +74,7 @@ TEST_F(BroadcastWriterTest, ReturnsFirstError)
 }
 
 // write() continues to subsequent writers when earlier ones succeed
-TEST_F(BroadcastWriterTest, SecondWriterFails)
-{
+TEST_F(BroadcastWriterTest, SecondWriterFails) {
     // Given
     auto mock1 = std::make_unique<MockLogWriter>();
     auto mock2 = std::make_unique<MockLogWriter>();
@@ -105,8 +101,7 @@ TEST_F(BroadcastWriterTest, SecondWriterFails)
 }
 
 // an empty writers list still returns success
-TEST_F(BroadcastWriterTest, EmptyWritersList)
-{
+TEST_F(BroadcastWriterTest, EmptyWritersList) {
     // Given
     std::vector<std::unique_ptr<ILogWriter>> writers;
     BroadcastWriter bw(std::move(writers));
@@ -119,8 +114,7 @@ TEST_F(BroadcastWriterTest, EmptyWritersList)
 }
 
 // a single writer successfully receives the message
-TEST_F(BroadcastWriterTest, SingleWriterSucceeds)
-{
+TEST_F(BroadcastWriterTest, SingleWriterSucceeds) {
     // Given
     auto mock = std::make_unique<MockLogWriter>();
 
@@ -141,12 +135,10 @@ TEST_F(BroadcastWriterTest, SingleWriterSucceeds)
 }
 
 // heap-allocated BroadcastWriter destroyed through ILogWriter base pointer
-TEST_F(BroadcastWriterTest, HeapAllocatedDestroysViaBasePointer)
-{
+TEST_F(BroadcastWriterTest, HeapAllocatedDestroysViaBasePointer) {
     // Given
     std::vector<std::unique_ptr<ILogWriter>> writers;
 
     // When / Then — destruction via unique_ptr<ILogWriter> invokes deleting destructor
-    std::unique_ptr<ILogWriter> bw =
-        std::make_unique<BroadcastWriter>(std::move(writers));
+    std::unique_ptr<ILogWriter> bw = std::make_unique<BroadcastWriter>(std::move(writers));
 }

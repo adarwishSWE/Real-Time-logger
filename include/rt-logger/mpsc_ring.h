@@ -24,8 +24,7 @@ namespace rtlog {
  *
  * @tparam ring_size Number of slots; must be a power of 2.
  */
-template <std::size_t ring_size>
-class MpscRing : public IRing {
+template <std::size_t ring_size> class MpscRing : public IRing {
     static_assert((ring_size & (ring_size - 1)) == 0, "ring_size must be power of 2");
     static constexpr std::size_t mask = ring_size - 1;
 
@@ -50,10 +49,10 @@ public:
         }
     }
 
-    MpscRing(const MpscRing&) = delete;
+    MpscRing(const MpscRing&)            = delete;
     MpscRing& operator=(const MpscRing&) = delete;
-    MpscRing(MpscRing&&) = delete;
-    MpscRing& operator=(MpscRing&&) = delete;
+    MpscRing(MpscRing&&)                 = delete;
+    MpscRing& operator=(MpscRing&&)      = delete;
 
     /**
      * @brief Attempt to push an entry without blocking. Thread-safe.
@@ -70,18 +69,20 @@ public:
 
         std::size_t pos = write_pos_.load(std::memory_order_relaxed);
 
-        while (true) { // LCOV_EXCL_LINE — gcov quirk: infinite-loop condition has no false branch
+        while (true) {  // LCOV_EXCL_LINE — gcov quirk: infinite-loop condition has no false branch
             const auto read_pos = read_pos_.load(std::memory_order_acquire);
             if (pos - read_pos >= ring_size) {
                 return std::unexpected(RingError::FULL);
             }
 
-            const auto index = pos & mask;
-            auto& slot = buffer_[index];
+            const auto index      = pos & mask;
+            auto& slot            = buffer_[index];
             const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
 
             if (seq != pos) {
-                // LCOV_EXCL_START — race window: another producer reserved slot but hasn't published sequence; shutdown check during that nanosecond gap is untestable without instrumenting production code
+                // LCOV_EXCL_START — race window: another producer reserved slot but hasn't
+                // published sequence; shutdown check during that nanosecond gap is untestable
+                // without instrumenting production code
                 if (shutdown_.load(std::memory_order_acquire)) {
                     return std::unexpected(RingError::SHUTDOWN);
                 }
@@ -90,9 +91,8 @@ public:
                 // LCOV_EXCL_STOP
             }
 
-            if (write_pos_.compare_exchange_weak(pos, pos + 1,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed)) {
+            if (write_pos_.compare_exchange_weak(pos, pos + 1, std::memory_order_acquire,
+                                                 std::memory_order_relaxed)) {
                 slot.data = entry;
                 slot.sequence.store(pos + 1, std::memory_order_release);
                 return {};
@@ -106,9 +106,9 @@ public:
      * @return The popped LogEntry, or std::nullopt if empty.
      */
     [[nodiscard]] std::optional<LogEntry> try_pop() noexcept override {
-        const auto pos = read_pos_.load(std::memory_order_relaxed);
-        const auto index = pos & mask;
-        auto& slot = buffer_[index];
+        const auto pos        = read_pos_.load(std::memory_order_relaxed);
+        const auto index      = pos & mask;
+        auto& slot            = buffer_[index];
 
         const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
         if (seq != pos + 1) {
@@ -160,7 +160,8 @@ public:
                     return std::unexpected(RingError::SHUTDOWN);
                 }
             } else {
-                return result; // LCOV_EXCL_LINE — race: try_push returns SHUTDOWN (not FULL) between push's shutdown check and try_push call
+                return result;  // LCOV_EXCL_LINE — race: try_push returns SHUTDOWN (not FULL)
+                                // between push's shutdown check and try_push call
             }
         }
     }
@@ -178,4 +179,4 @@ public:
     }
 };
 
-} // namespace rtlog
+}  // namespace rtlog

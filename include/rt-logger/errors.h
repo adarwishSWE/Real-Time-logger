@@ -17,4 +17,4 @@ enum class LoggerError {
     ALREADY_SHUTDOWN,
 };
 
-} // namespace rtlog
+}  // namespace rtlog
