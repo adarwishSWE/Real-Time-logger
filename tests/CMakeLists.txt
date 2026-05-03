@@ -8,6 +8,8 @@ FetchContent_MakeAvailable(googletest)
 
 include(GoogleTest)
 
+add_subdirectory(mocks)
+
 add_executable(rt-logger-tests)
 target_sources(rt-logger-tests PRIVATE
     log_level_test.cpp
@@ -19,12 +21,9 @@ target_sources(rt-logger-tests PRIVATE
 )
 
 target_compile_features(rt-logger-tests PRIVATE cxx_std_23)
-target_include_directories(rt-logger-tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/mocks
-)
 target_link_libraries(rt-logger-tests PRIVATE
     rt-logger
+    rt-logger-mocks
     GTest::gtest_main
     GTest::gmock
 )
