@@ -16,6 +16,7 @@ if(RTLOG_BUILD_SANITIZERS)
 endif()
 
 option(RTLOG_BUILD_BENCHMARKS "Build micro-benchmarks" ON)
+option(RTLOG_BUILD_EXAMPLES "Build example clients" ON)
 option(RTLOG_BUILD_TESTS "Build unit tests" ON)
 
 if(RTLOG_BUILD_TESTS)
@@ -33,6 +34,36 @@ if(RTLOG_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
+if(RTLOG_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+include(CMakePackageConfigHelpers)
+
+install(EXPORT rt-logger-targets
+    FILE rt-logger-targets.cmake
+    NAMESPACE rtlog::
+    DESTINATION lib/cmake/rt-logger
+)
+
+configure_package_config_file(
+    cmake/rt-logger-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/rt-logger-config.cmake
+    INSTALL_DESTINATION lib/cmake/rt-logger
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/rt-logger-config-version.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/rt-logger-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/rt-logger-config-version.cmake
+    DESTINATION lib/cmake/rt-logger
+)
+
 file(GLOB_RECURSE ALL_FORMATTABLE_FILES
     "${CMAKE_SOURCE_DIR}/include/*.h"
     "${CMAKE_SOURCE_DIR}/include/*.cpp"
@@ -42,6 +73,8 @@ file(GLOB_RECURSE ALL_FORMATTABLE_FILES
     "${CMAKE_SOURCE_DIR}/tests/*.cpp"
     "${CMAKE_SOURCE_DIR}/benchmarks/*.h"
     "${CMAKE_SOURCE_DIR}/benchmarks/*.cpp"
+    "${CMAKE_SOURCE_DIR}/examples/*.h"
+    "${CMAKE_SOURCE_DIR}/examples/*.cpp"
 )
 
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
