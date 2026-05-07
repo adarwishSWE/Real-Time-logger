@@ -15,11 +15,23 @@ if(RTLOG_BUILD_SANITIZERS)
     )
 endif()
 
-enable_testing()
+option(RTLOG_BUILD_BENCHMARKS "Build micro-benchmarks" ON)
+option(RTLOG_BUILD_TESTS "Build unit tests" ON)
+
+if(RTLOG_BUILD_TESTS)
+    enable_testing()
+endif()
 
 add_subdirectory(include)
 add_subdirectory(src)
-add_subdirectory(tests)
+
+if(RTLOG_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
+if(RTLOG_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
 
 file(GLOB_RECURSE ALL_FORMATTABLE_FILES
     "${CMAKE_SOURCE_DIR}/include/*.h"
@@ -28,6 +40,8 @@ file(GLOB_RECURSE ALL_FORMATTABLE_FILES
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
     "${CMAKE_SOURCE_DIR}/tests/*.h"
     "${CMAKE_SOURCE_DIR}/tests/*.cpp"
+    "${CMAKE_SOURCE_DIR}/benchmarks/*.h"
+    "${CMAKE_SOURCE_DIR}/benchmarks/*.cpp"
 )
 
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
