@@ -40,7 +40,7 @@ public:
      * @param source_loc Source location (file, line, function).
      * @return Success, or LoggerError::ALREADY_SHUTDOWN if the logger is shut down.
      */
-    [[nodiscard]] virtual std::expected<void, LoggerError>
+    virtual std::expected<void, LoggerError>
     log(LogLevel level, std::string_view message, const SourceLoc& source_loc) noexcept = 0;
 
     /**

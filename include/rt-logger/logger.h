@@ -58,7 +58,7 @@ public:
      * @param source_loc Source location (file, line, function).
      * @return Success, or LoggerError::ALREADY_SHUTDOWN.
      */
-    [[nodiscard]] std::expected<void, LoggerError>
+    std::expected<void, LoggerError>
     log(LogLevel level, std::string_view message, const SourceLoc& source_loc) noexcept override;
 
     /**

@@ -40,3 +40,5 @@ coverage_filtered.info
 *.swo
 *~
 .DS_Store
+stress_client.log
+broadcast_client.log

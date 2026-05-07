@@ -35,20 +35,18 @@ static void BM_SimpleFormat(benchmark::State& state) {
 
     for (auto _ : state) {
         auto time_t_val = std::chrono::system_clock::to_time_t(entry.timestamp);
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       entry.timestamp.time_since_epoch()) %
-                   1000;
+        auto ms         = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      entry.timestamp.time_since_epoch()) %
+                  1000;
         std::tm tm_buf{};
         localtime_r(&time_t_val, &tm_buf);
         std::size_t offset = std::strftime(buf.data(), buf.size(), "[%Y-%m-%d %H:%M:%S", &tm_buf);
 
-        int n =
-            std::snprintf(buf.data() + offset, buf.size() - offset, ".%03ld] [%s] %s:%d (%s) — %s",
-                          static_cast<long>(ms.count()), to_string(entry.level).data(),
-                          entry.source_loc.file ? entry.source_loc.file : "",
-                          entry.source_loc.line,
-                          entry.source_loc.function ? entry.source_loc.function : "",
-                          entry.message.data());
+        int n              = std::snprintf(
+            buf.data() + offset, buf.size() - offset, ".%03ld] [%s] %s:%d (%s) — %s",
+            static_cast<long>(ms.count()), to_string(entry.level).data(),
+            entry.source_loc.file ? entry.source_loc.file : "", entry.source_loc.line,
+            entry.source_loc.function ? entry.source_loc.function : "", entry.message.data());
         if (n > 0) {
             offset += static_cast<std::size_t>(n);
         }
@@ -74,20 +72,18 @@ static void BM_LongMessageFormat(benchmark::State& state) {
 
     for (auto _ : state) {
         auto time_t_val = std::chrono::system_clock::to_time_t(entry.timestamp);
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       entry.timestamp.time_since_epoch()) %
-                   1000;
+        auto ms         = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      entry.timestamp.time_since_epoch()) %
+                  1000;
         std::tm tm_buf{};
         localtime_r(&time_t_val, &tm_buf);
         std::size_t offset = std::strftime(buf.data(), buf.size(), "[%Y-%m-%d %H:%M:%S", &tm_buf);
 
-        int n =
-            std::snprintf(buf.data() + offset, buf.size() - offset, ".%03ld] [%s] %s:%d (%s) — %s",
-                          static_cast<long>(ms.count()), to_string(entry.level).data(),
-                          entry.source_loc.file ? entry.source_loc.file : "",
-                          entry.source_loc.line,
-                          entry.source_loc.function ? entry.source_loc.function : "",
-                          entry.message.data());
+        int n              = std::snprintf(
+            buf.data() + offset, buf.size() - offset, ".%03ld] [%s] %s:%d (%s) — %s",
+            static_cast<long>(ms.count()), to_string(entry.level).data(),
+            entry.source_loc.file ? entry.source_loc.file : "", entry.source_loc.line,
+            entry.source_loc.function ? entry.source_loc.function : "", entry.message.data());
         if (n > 0) {
             offset += static_cast<std::size_t>(n);
         }
