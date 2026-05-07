@@ -33,4 +33,5 @@ AllowAllParametersOfDeclarationOnNextLine: false  # ← new
 # --- includes & comments ---
 SortIncludes: Never
 IncludeBlocks: Preserve                    # ← new: keeps your include groups intact
+InsertNewlineAtEOF: true
 ReflowComments: false                      # ← new: don't break Doxygen comments
