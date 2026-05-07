@@ -8,3 +8,7 @@ add_library(rt-logger STATIC
 target_compile_features(rt-logger PUBLIC cxx_std_23)
 
 target_link_libraries(rt-logger PUBLIC rt-logger-headers)
+
+if(TARGET rt-logger-sanitizers)
+    target_link_libraries(rt-logger PRIVATE rt-logger-sanitizers)
+endif()

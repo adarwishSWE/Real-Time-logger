@@ -28,4 +28,8 @@ target_link_libraries(rt-logger-tests PRIVATE
     GTest::gmock
 )
 
+if(TARGET rt-logger-sanitizers)
+    target_link_libraries(rt-logger-tests PRIVATE rt-logger-sanitizers)
+endif()
+
 gtest_discover_tests(rt-logger-tests)

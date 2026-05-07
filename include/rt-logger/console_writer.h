@@ -17,10 +17,10 @@ class ConsoleWriter : public ILogWriter {
 public:
     ConsoleWriter()                                = default;
     ~ConsoleWriter() override                      = default;
-    ConsoleWriter(const ConsoleWriter&)            = default;
-    ConsoleWriter& operator=(const ConsoleWriter&) = default;
-    ConsoleWriter(ConsoleWriter&&)                 = default;
-    ConsoleWriter& operator=(ConsoleWriter&&)      = default;
+    ConsoleWriter(const ConsoleWriter&)            = delete;
+    ConsoleWriter& operator=(const ConsoleWriter&) = delete;
+    ConsoleWriter(ConsoleWriter&&)                 = delete;
+    ConsoleWriter& operator=(ConsoleWriter&&)      = delete;
 
     /**
      * @brief Write a formatted log line to stdout, followed by a newline.

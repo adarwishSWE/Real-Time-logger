@@ -25,8 +25,8 @@ public:
     ~BroadcastWriter() override                        = default;
     BroadcastWriter(const BroadcastWriter&)            = delete;
     BroadcastWriter& operator=(const BroadcastWriter&) = delete;
-    BroadcastWriter(BroadcastWriter&&)                 = default;
-    BroadcastWriter& operator=(BroadcastWriter&&)      = default;
+    BroadcastWriter(BroadcastWriter&&)                 = delete;
+    BroadcastWriter& operator=(BroadcastWriter&&)      = delete;
 
     /**
      * @brief Write the message to every writer in order.
