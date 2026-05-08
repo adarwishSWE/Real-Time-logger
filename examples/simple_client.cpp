@@ -22,14 +22,14 @@ int main() {
     std::cout << "--- Logging at INFO level (TRACE and DEBUG filtered) ---\n";
     logger.log(rtlog::LogLevel::TRACE, "This trace message should NOT appear", loc);
     logger.log(rtlog::LogLevel::DEBUG, "This debug message should NOT appear", loc);
-    logger.log(rtlog::LogLevel::INFO,  "Hello from rt-logger!", loc);
-    logger.log(rtlog::LogLevel::WARN,  "A warning for your attention", loc);
+    logger.log(rtlog::LogLevel::INFO, "Hello from rt-logger!", loc);
+    logger.log(rtlog::LogLevel::WARN, "A warning for your attention", loc);
     logger.log(rtlog::LogLevel::ERROR, "Something went wrong", loc);
 
     std::cout << "\n--- Lowering level to DEBUG ---\n";
     logger.set_level(rtlog::LogLevel::DEBUG);
     logger.log(rtlog::LogLevel::DEBUG, "Now debug messages are visible", loc);
-    logger.log(rtlog::LogLevel::INFO,  "Info still works", loc);
+    logger.log(rtlog::LogLevel::INFO, "Info still works", loc);
 
     std::cout << "\n--- Shutting down ---\n";
     logger.shutdown();

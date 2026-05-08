@@ -22,7 +22,6 @@ Testing/
 # Project docs (local only)
 AGENTS.md
 PLAN.md
-BUILD.md
 
 # Coverage artifacts
 coverage/
@@ -42,3 +41,4 @@ coverage_filtered.info
 .DS_Store
 stress_client.log
 broadcast_client.log
+README_DEV.md

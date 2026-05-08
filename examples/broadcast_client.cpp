@@ -38,8 +38,8 @@ int main() {
 
     logger.log(rtlog::LogLevel::TRACE, "Broadcast: this TRACE should be FILTERED", loc);
     logger.log(rtlog::LogLevel::DEBUG, "Broadcast: this DEBUG should be FILTERED", loc);
-    logger.log(rtlog::LogLevel::INFO,  "Broadcast: this INFO goes to console AND file", loc);
-    logger.log(rtlog::LogLevel::WARN,  "Broadcast: warning to all destinations", loc);
+    logger.log(rtlog::LogLevel::INFO, "Broadcast: this INFO goes to console AND file", loc);
+    logger.log(rtlog::LogLevel::WARN, "Broadcast: warning to all destinations", loc);
     logger.log(rtlog::LogLevel::ERROR, "Broadcast: error to all destinations", loc);
 
     std::cout << "\n=== Lowering level to TRACE ===\n";
@@ -48,7 +48,7 @@ int main() {
     logger.set_level(rtlog::LogLevel::TRACE);
     logger.log(rtlog::LogLevel::TRACE, "Broadcast: trace detail (now visible)", loc);
     logger.log(rtlog::LogLevel::DEBUG, "Broadcast: debug detail (now visible)", loc);
-    logger.log(rtlog::LogLevel::INFO,  "Broadcast: info detail", loc);
+    logger.log(rtlog::LogLevel::INFO, "Broadcast: info detail", loc);
 
     std::cout << "\n=== Shutting down (drains remaining entries) ===\n";
     logger.shutdown();
