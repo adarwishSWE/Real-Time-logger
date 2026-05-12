@@ -161,14 +161,14 @@ TEST_F(MpscRingTest, BlockingPushNotifiesMultipleWaiters) {
     std::jthread pusher1([&ring, &pushed_count] {
         auto result = ring.push(make_entry());
         if (result.has_value()) {
-            pushed_count.fetch_add(1, std::memory_order_relaxed);
+            pushed_count.fetch_add(1, std::memory_order_release);
         }
     });
 
     std::jthread pusher2([&ring, &pushed_count] {
         auto result = ring.push(make_entry());
         if (result.has_value()) {
-            pushed_count.fetch_add(1, std::memory_order_relaxed);
+            pushed_count.fetch_add(1, std::memory_order_release);
         }
     });
 
@@ -281,7 +281,7 @@ TEST_F(MpscRingTest, ShutdownWakesMultipleBlockedPushers) {
     auto blocked_pusher = [&ring, &shutdown_count] {
         auto result = ring.push(make_entry());
         if (!result.has_value() && result.error() == RingError::SHUTDOWN) {
-            shutdown_count.fetch_add(1, std::memory_order_relaxed);
+            shutdown_count.fetch_add(1, std::memory_order_release);
         }
     };
 
