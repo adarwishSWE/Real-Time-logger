@@ -71,6 +71,10 @@ sudo apt-get install -y clang-19 cmake
 
 auto ring   = std::make_unique<rtlog::MpscRing<1024>>();
 auto writer = rtlog::FileWriter::create("app.log");
+if (!writer) {
+    std::cerr << "Failed to open log file\n";
+    return 1;
+}
 rtlog::Logger logger{std::move(ring), std::move(writer), rtlog::LogLevel::INFO};
 
 rtlog::SourceLoc loc{"main.cpp", __LINE__, __func__};
@@ -85,6 +89,10 @@ logger.shutdown();
 >     logger.log(level, msg, rtlog::SourceLoc{__FILE__, __LINE__, __func__})
 > LOG(logger, rtlog::LogLevel::INFO, "System initialized");
 > ```
+>
+> **Message truncation:** Messages longer than 255 characters are silently truncated to fit the fixed-size `LogEntry` buffer.
+>
+> **Blocking behavior:** `log()` blocks when the ring buffer is full. The ring size caps both memory usage and worst-case producer stall time. If you need non-blocking logging, use `MpscRing::try_push()` directly.
 
 ## Build & Install
 
@@ -126,7 +134,11 @@ cmake --build build
 ## API Overview
 
 ```cpp
-// Submit a log entry (thread-safe, non-blocking when ring has space)
+// Submit a log entry (thread-safe)
+// Fast path (~500 ns) when the ring has space; blocks on a condition
+// variable if the ring is full until the consumer drains a slot.
+// Returns ALREADY_SHUTDOWN if the logger is shut down.
+// Messages longer than 255 chars are silently truncated.
 std::expected<void, LoggerError>
 log(LogLevel level, std::string_view message, const SourceLoc& source_loc);
 
@@ -138,7 +150,12 @@ void set_writer(std::unique_ptr<ILogWriter> writer);
 
 // Graceful shutdown: drain remaining entries, join consumer thread
 void shutdown();
+
+// Cumulative write failures since construction (diagnostic counter)
+std::size_t write_error_count() const;
 ```
+
+**Log levels** (ordered by severity): `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`.
 
 ## Architecture
 

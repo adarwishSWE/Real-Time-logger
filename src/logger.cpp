@@ -1,6 +1,7 @@
 #include <rt-logger/logger.h>
 
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <ctime>
 #include <cstring>
@@ -60,6 +61,8 @@ Logger::log(LogLevel level, std::string_view message, const SourceLoc& source_lo
     if (shutdown_requested_.load(std::memory_order_acquire)) {
         return std::unexpected(LoggerError::ALREADY_SHUTDOWN);
     }
+
+    assert(message.data() != nullptr);
 
     if (static_cast<int>(level) < static_cast<int>(level_.load(std::memory_order_relaxed))) {
         return {};

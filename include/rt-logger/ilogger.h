@@ -57,7 +57,9 @@ public:
      * @brief Replace the output writer.
      *
      * Takes ownership of the new writer. The old writer is destroyed once
-     * any in-progress writes complete. This method is thread-safe.
+     * any in-progress writes complete. Synchronized internally with the
+     * consumer thread via a mutex so that no write is interrupted mid-flight.
+     * This method is thread-safe.
      *
      * @param writer The new writer (ownership transferred).
      */

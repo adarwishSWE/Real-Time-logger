@@ -21,6 +21,17 @@ namespace rtlog {
  * MPSC ring buffer, and dispatches formatted output to an ILogWriter on
  * a dedicated background thread. Supports dynamic level filtering, writer
  * switching, write-error tracking, and graceful drain-on-shutdown.
+ *
+ * @section Shutdown Contract
+ *
+ * 1. **Pending messages are guaranteed to be flushed.** After shutdown() is
+ *    called, the consumer thread drains every remaining entry from the ring
+ *    before exiting.
+ * 2. **Messages racing with shutdown are rejected.** If log() is called
+ *    concurrently with shutdown(), it may either succeed (message enqueued
+ *    before the ring is shut down) or fail with ALREADY_SHUTDOWN.
+ * 3. **log() after shutdown always fails immediately.** Once shutdown() has
+ *    completed, all subsequent log() calls return ALREADY_SHUTDOWN.
  */
 class Logger : public ILogger {
 public:
