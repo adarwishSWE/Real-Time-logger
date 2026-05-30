@@ -8,18 +8,18 @@
 namespace rtlog {
 
 struct SourceLoc {
-    const char* file;
-    int line;
-    const char* function;
+    const char* file_;
+    int line_;
+    const char* function_;
 };
 
 using Timestamp = std::chrono::system_clock::time_point;
 
 struct LogEntry {
-    Timestamp timestamp;
-    LogLevel level;
-    SourceLoc source_loc;
-    std::array<char, 256> message;
+    Timestamp timestamp_;
+    LogLevel level_{};
+    SourceLoc source_loc_{};
+    std::array<char, 256> message_{};
 };
 
 } // namespace rtlog

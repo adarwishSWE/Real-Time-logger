@@ -1,0 +1,29 @@
+Checks: >
+  bugprone-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -readability-named-parameter,
+  -readability-convert-member-functions-to-static,
+  -readability-identifier-naming,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -clang-analyzer-deadcode.DeadStores,
+  -readability-magic-numbers
+
+CheckOptions:
+  - key:   readability-identifier-naming.VariableCase
+    value: lower_case
+
+WarningsAsErrors: ''
+HeaderFilterRegex: 'benchmarks/.*'
+FormatStyle: file

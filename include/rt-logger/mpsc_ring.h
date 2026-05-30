@@ -29,8 +29,8 @@ template <std::size_t ring_size> class MpscRing : public IRing {
     static constexpr std::size_t mask = ring_size - 1;
 
     struct alignas(std::hardware_destructive_interference_size) Slot {
-        alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> sequence;
-        LogEntry data;
+        alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> sequence_;
+        LogEntry data_;
     };
 
     alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> write_pos_{0};
@@ -41,13 +41,19 @@ template <std::size_t ring_size> class MpscRing : public IRing {
     std::mutex push_mutex_;
     std::condition_variable push_cv_;
 
+    Slot& slot_at(std::size_t pos) noexcept { return buffer_[pos & mask]; }
+
+    const Slot& slot_at(std::size_t pos) const noexcept { return buffer_[pos & mask]; }
+
 public:
     /** @brief Construct an empty ring buffer with all slots initialized. */
     MpscRing() noexcept {
         for (std::size_t i = 0; i < ring_size; ++i) {
-            buffer_[i].sequence.store(i, std::memory_order_relaxed);
+            slot_at(i).sequence_.store(i, std::memory_order_relaxed);
         }
     }
+
+    ~MpscRing() noexcept override = default;
 
     MpscRing(const MpscRing&) = delete;
     MpscRing& operator=(const MpscRing&) = delete;
@@ -75,9 +81,8 @@ public:
                 return std::unexpected(RingError::FULL);
             }
 
-            const auto index = pos & mask;
-            auto& slot = buffer_[index];
-            const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
+            auto& slot = slot_at(pos);
+            const std::size_t seq = slot.sequence_.load(std::memory_order_acquire);
 
             if (seq != pos) {
                 // LCOV_EXCL_START — race window: another producer reserved slot but hasn't
@@ -95,8 +100,8 @@ public:
                     pos + 1,
                     std::memory_order_acquire,
                     std::memory_order_relaxed)) {
-                slot.data = entry;
-                slot.sequence.store(pos + 1, std::memory_order_release);
+                slot.data_ = entry;
+                slot.sequence_.store(pos + 1, std::memory_order_release);
                 return {};
             }
         }
@@ -109,16 +114,15 @@ public:
      */
     std::optional<LogEntry> try_pop() noexcept override {
         const auto pos = read_pos_.load(std::memory_order_relaxed);
-        const auto index = pos & mask;
-        auto& slot = buffer_[index];
+        auto& slot = slot_at(pos);
 
-        const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
+        const std::size_t seq = slot.sequence_.load(std::memory_order_acquire);
         if (seq != pos + 1) {
             return std::nullopt;
         }
 
-        LogEntry entry = slot.data;
-        slot.sequence.store(pos + ring_size, std::memory_order_release);
+        LogEntry entry = slot.data_;
+        slot.sequence_.store(pos + ring_size, std::memory_order_release);
         read_pos_.store(pos + 1, std::memory_order_release);
 
         push_cv_.notify_one();
@@ -153,9 +157,9 @@ public:
                     if (shutdown_.load(std::memory_order_acquire)) {
                         return true;
                     }
-                    const auto w = write_pos_.load(std::memory_order_relaxed);
-                    const auto r = read_pos_.load(std::memory_order_acquire);
-                    return w - r < ring_size;
+                    const auto write_snapshot = write_pos_.load(std::memory_order_relaxed);
+                    const auto read_snapshot = read_pos_.load(std::memory_order_acquire);
+                    return write_snapshot - read_snapshot < ring_size;
                 });
 
                 if (shutdown_.load(std::memory_order_acquire)) {

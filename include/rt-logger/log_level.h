@@ -1,11 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <ostream>
 #include <string_view>
 
 namespace rtlog {
 
-enum class LogLevel {
+enum class LogLevel : std::uint8_t {
     TRACE,
     DEBUG,
     INFO,
@@ -32,8 +33,8 @@ constexpr std::string_view to_string(LogLevel level) noexcept {
     return "UNKNOWN";
 }
 
-inline std::ostream& operator<<(std::ostream& os, LogLevel level) noexcept {
-    return os << to_string(level);
+inline std::ostream& operator<<(std::ostream& ostream, LogLevel level) noexcept {
+    return ostream << to_string(level);
 }
 
 } // namespace rtlog

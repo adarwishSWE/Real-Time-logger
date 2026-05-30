@@ -22,6 +22,8 @@ Testing/
 # Project docs (local only)
 AGENTS.md
 PLAN.md
+README_DEV.md
+TECHNICAL_SUMMARY.md
 
 # Coverage artifacts
 coverage/

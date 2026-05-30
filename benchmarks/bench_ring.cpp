@@ -12,10 +12,10 @@ namespace rtlog {
 
 static LogEntry make_bench_entry() {
     LogEntry entry{};
-    entry.timestamp = std::chrono::system_clock::now();
-    entry.level = LogLevel::INFO;
-    entry.source_loc = {"bench.cpp", 1, "bench"};
-    std::memcpy(entry.message.data(), "benchmark", 10);
+    entry.timestamp_ = std::chrono::system_clock::now();
+    entry.level_ = LogLevel::INFO;
+    entry.source_loc_ = {.file_ = "bench.cpp", .line_ = 1, .function_ = "bench"};
+    std::memcpy(entry.message_.data(), "benchmark", 10);
     return entry;
 }
 
@@ -24,7 +24,7 @@ static void BM_RingTryPushPop(benchmark::State& state) {
     MpscRing<1024> ring;
     auto entry = make_bench_entry();
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         auto result = ring.try_push(entry);
         benchmark::DoNotOptimize(result);
         ring.try_pop();
@@ -39,7 +39,7 @@ static void BM_RingTryPushContended(benchmark::State& state) {
     MpscRing<4096> ring;
     auto entry = make_bench_entry();
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         auto result = ring.try_push(entry);
         benchmark::DoNotOptimize(result);
     }
@@ -52,15 +52,15 @@ static void BM_RingTryPop(benchmark::State& state) {
     auto entry = make_bench_entry();
 
     // Pre-fill the ring
-    for (int i = 0; i < 512; ++i) {
-        ring.try_push(entry);
+    for (int fill_idx = 0; fill_idx < 512; ++fill_idx) {
+        static_cast<void>(ring.try_push(entry));
     }
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         auto result = ring.try_pop();
         benchmark::DoNotOptimize(result);
         if (result.has_value()) {
-            ring.try_push(entry);
+            static_cast<void>(ring.try_push(entry));
         }
     }
 }
@@ -82,7 +82,7 @@ static void BM_RingPushBlocking(benchmark::State& state) {
         }
     });
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         auto result = ring.push(entry);
         benchmark::DoNotOptimize(result);
     }

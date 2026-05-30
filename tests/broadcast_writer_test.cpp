@@ -39,10 +39,10 @@ TEST_F(BroadcastWriterTest, FanOutToAllWriters) {
     writers.push_back(std::move(mock2));
     writers.push_back(std::move(mock3));
 
-    BroadcastWriter bw(std::move(writers));
+    BroadcastWriter broadcast_writer(std::move(writers));
 
     // When
-    auto result = bw.write("msg");
+    auto result = broadcast_writer.write("msg");
 
     // Then
     EXPECT_TRUE(result.has_value());
@@ -63,10 +63,10 @@ TEST_F(BroadcastWriterTest, ReturnsFirstError) {
     writers.push_back(std::move(mock1));
     writers.push_back(std::move(mock2));
 
-    BroadcastWriter bw(std::move(writers));
+    BroadcastWriter broadcast_writer(std::move(writers));
 
     // When
-    auto result = bw.write("msg");
+    auto result = broadcast_writer.write("msg");
 
     // Then
     EXPECT_FALSE(result.has_value());
@@ -90,10 +90,10 @@ TEST_F(BroadcastWriterTest, SecondWriterFails) {
     writers.push_back(std::move(mock1));
     writers.push_back(std::move(mock2));
 
-    BroadcastWriter bw(std::move(writers));
+    BroadcastWriter broadcast_writer(std::move(writers));
 
     // When
-    auto result = bw.write("msg");
+    auto result = broadcast_writer.write("msg");
 
     // Then
     EXPECT_FALSE(result.has_value());
@@ -104,10 +104,10 @@ TEST_F(BroadcastWriterTest, SecondWriterFails) {
 TEST_F(BroadcastWriterTest, EmptyWritersList) {
     // Given
     std::vector<std::unique_ptr<ILogWriter>> writers;
-    BroadcastWriter bw(std::move(writers));
+    BroadcastWriter broadcast_writer(std::move(writers));
 
     // When
-    auto result = bw.write("msg");
+    auto result = broadcast_writer.write("msg");
 
     // Then
     EXPECT_TRUE(result.has_value());
@@ -125,10 +125,10 @@ TEST_F(BroadcastWriterTest, SingleWriterSucceeds) {
     std::vector<std::unique_ptr<ILogWriter>> writers;
     writers.push_back(std::move(mock));
 
-    BroadcastWriter bw(std::move(writers));
+    BroadcastWriter broadcast_writer(std::move(writers));
 
     // When
-    auto result = bw.write("msg");
+    auto result = broadcast_writer.write("msg");
 
     // Then
     EXPECT_TRUE(result.has_value());
@@ -140,5 +140,5 @@ TEST_F(BroadcastWriterTest, HeapAllocatedDestroysViaBasePointer) {
     std::vector<std::unique_ptr<ILogWriter>> writers;
 
     // When / Then — destruction via unique_ptr<ILogWriter> invokes deleting destructor
-    std::unique_ptr<ILogWriter> bw = std::make_unique<BroadcastWriter>(std::move(writers));
+    std::unique_ptr<ILogWriter> writer = std::make_unique<BroadcastWriter>(std::move(writers));
 }

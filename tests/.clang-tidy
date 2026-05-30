@@ -10,7 +10,10 @@ Checks: >
   -readability-convert-member-functions-to-static,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-pro-bounds-constant-array-index,
-  -readability-magic-numbers
+  -readability-magic-numbers,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -readability-function-cognitive-complexity,
+  -clang-analyzer-optin.core.EnumCastOutOfRange
 
 CheckOptions:
   - key:   readability-identifier-naming.ClassCase
@@ -23,11 +26,7 @@ CheckOptions:
     value: lower_case
   - key:   readability-identifier-naming.MemberSuffix
     value: _
-  - key:   readability-identifier-naming.FunctionIgnoredRegexp
-    value: '^BM_'
-  - key:   readability-identifier-naming.MacroDefinitionCase
-    value: UPPER_CASE
 
 WarningsAsErrors: ''
-HeaderFilterRegex: 'include/.*|src/.*|tests/.*|examples/.*'
+HeaderFilterRegex: 'tests/.*'
 FormatStyle: file

@@ -114,8 +114,11 @@ private:
     std::atomic<std::size_t> write_errors_{0};
     std::jthread thread_;
 
+    /** @brief Idempotent shutdown implementation (non-virtual for destructor use). */
+    void shutdown_impl() noexcept;
+
     /** @brief Background consumer loop. Formats and writes entries. */
-    void run(std::stop_token st);
+    void run(const std::stop_token& stop_token);
 };
 
 } // namespace rtlog

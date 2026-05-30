@@ -12,10 +12,10 @@
 using namespace rtlog;
 
 LogEntry make_entry(int line = 0, LogLevel level = LogLevel::INFO) {
-    LogEntry e{};
-    e.source_loc.line = line;
-    e.level = level;
-    return e;
+    LogEntry entry{};
+    entry.source_loc_.line_ = line;
+    entry.level_ = level;
+    return entry;
 }
 
 class MpscRingTest : public ::testing::Test {};
@@ -32,7 +32,7 @@ TEST_F(MpscRingTest, SingleProducerPushPop) {
 
     // Then
     EXPECT_TRUE(popped.has_value());
-    EXPECT_EQ(popped->level, LogLevel::INFO);
+    EXPECT_EQ(popped->level_, LogLevel::INFO);
 }
 
 // try_pop() on an empty ring returns std::nullopt
@@ -78,25 +78,24 @@ TEST_F(MpscRingTest, FifoOrdering) {
     for (int i = 0; i < 3; ++i) {
         auto popped = ring.try_pop();
         ASSERT_TRUE(popped.has_value());
-        EXPECT_EQ(popped->source_loc.line, i);
+        EXPECT_EQ(popped->source_loc_.line_, i);
     }
 }
 
 // multiple producers can push concurrently without data loss
 TEST_F(MpscRingTest, MultiProducerContention) {
     // Given
-    constexpr int kNumProducers = 4;
-    constexpr int kItemsPerProducer = 100;
-    constexpr int kTotalItems = kNumProducers * kItemsPerProducer;
+    constexpr int num_producers = 4;
+    constexpr int items_per_producer = 100;
+    constexpr int total_items = num_producers * items_per_producer;
     MpscRing<256> ring;
 
     // When
     std::vector<std::jthread> producers;
-    for (int t = 0; t < kNumProducers; ++t) {
-        producers.emplace_back([&ring, t] {
-            for (int i = 0; i < kItemsPerProducer; ++i) {
-                auto entry = make_entry(t);
-                entry.source_loc.file = reinterpret_cast<const char*>(static_cast<uintptr_t>(i));
+    for (int producer_idx = 0; producer_idx < num_producers; ++producer_idx) {
+        producers.emplace_back([&ring, producer_idx] {
+            for (int item_idx = 0; item_idx < items_per_producer; ++item_idx) {
+                auto entry = make_entry(producer_idx);
 
                 while (true) {
                     auto result = ring.try_push(entry);
@@ -109,7 +108,7 @@ TEST_F(MpscRingTest, MultiProducerContention) {
     }
 
     int count = 0;
-    while (count < kTotalItems) {
+    while (count < total_items) {
         auto popped = ring.try_pop();
         if (popped.has_value()) {
             ++count;
@@ -117,7 +116,7 @@ TEST_F(MpscRingTest, MultiProducerContention) {
     }
 
     // Then
-    EXPECT_EQ(count, kTotalItems);
+    EXPECT_EQ(count, total_items);
 }
 
 // push() blocks when the ring is full and unblocks when space is freed
@@ -139,8 +138,7 @@ TEST_F(MpscRingTest, BlockingPushWaitsForSpace) {
     EXPECT_FALSE(pushed.load(std::memory_order_acquire));
 
     // When
-    auto __ = ring.try_pop();
-    (void)__;
+    static_cast<void>(ring.try_pop());
 
     // Then
     while (!pushed.load(std::memory_order_acquire)) {
@@ -264,8 +262,8 @@ TEST_F(MpscRingTest, TryPopStillWorksAfterShutdown) {
 
     // Then
     EXPECT_TRUE(popped.has_value());
-    EXPECT_EQ(popped->level, LogLevel::INFO);
-    EXPECT_EQ(popped->source_loc.line, 42);
+    EXPECT_EQ(popped->level_, LogLevel::INFO);
+    EXPECT_EQ(popped->source_loc_.line_, 42);
 }
 
 // shutdown() notifies all blocked pushers via notify_all()
@@ -285,9 +283,9 @@ TEST_F(MpscRingTest, ShutdownWakesMultipleBlockedPushers) {
         }
     };
 
-    std::jthread p1(blocked_pusher);
-    std::jthread p2(blocked_pusher);
-    std::jthread p3(blocked_pusher);
+    std::jthread producer1(blocked_pusher);
+    std::jthread producer2(blocked_pusher);
+    std::jthread producer3(blocked_pusher);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -316,7 +314,7 @@ TEST_F(MpscRingTest, RingWrappingPreservesData) {
         for (int i = 0; i < 4; ++i) {
             auto popped = ring.try_pop();
             ASSERT_TRUE(popped.has_value());
-            EXPECT_EQ(popped->source_loc.line, cycle * 10 + i);
+            EXPECT_EQ(popped->source_loc_.line_, cycle * 10 + i);
         }
     }
 }
@@ -335,7 +333,7 @@ TEST_F(MpscRingTest, MinimumRingSize) {
     ASSERT_TRUE(popped.has_value());
 
     // Then
-    EXPECT_EQ(popped->level, LogLevel::WARN);
+    EXPECT_EQ(popped->level_, LogLevel::WARN);
     EXPECT_FALSE(ring.try_pop().has_value());
 }
 

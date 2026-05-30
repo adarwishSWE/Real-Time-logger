@@ -45,16 +45,16 @@ int main() {
     std::vector<std::jthread> threads;
     threads.reserve(num_threads);
 
-    for (int t = 0; t < num_threads; ++t) {
+    for (int thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
         threads.emplace_back([&logger, &loc] {
-            for (int i = 0; i < messages_per_thread; ++i) {
+            for (int msg_idx = 0; msg_idx < messages_per_thread; ++msg_idx) {
                 logger.log(rtlog::LogLevel::INFO, "Thread message", loc);
             }
         });
     }
 
-    for (auto& t : threads) {
-        t.join();
+    for (auto& thread : threads) {
+        thread.join();
     }
 
     logger.shutdown();
@@ -64,7 +64,7 @@ int main() {
     const auto total_ms = elapsed.count();
     const std::size_t total_messages = static_cast<std::size_t>(num_threads) * messages_per_thread;
 
-    double seconds = total_ms > 0 ? total_ms / 1000.0 : 1.0;
+    double seconds = total_ms > 0 ? static_cast<double>(total_ms) / 1000.0 : 1.0;
     double throughput = static_cast<double>(total_messages) / seconds;
 
     std::cout << "Elapsed:  " << total_ms << " ms\n";

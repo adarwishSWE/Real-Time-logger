@@ -17,7 +17,6 @@
 #include <mock_log_writer.h>
 
 using namespace rtlog;
-using ::testing::_;
 using ::testing::Invoke;
 using ::testing::Return;
 
@@ -29,14 +28,14 @@ protected:
 
     void SetUp() override {
         ring_ = std::make_unique<MpscRing<64>>();
-        auto w = std::make_unique<MockLogWriter>();
-        writer_ptr_ = w.get();
-        writer_ = std::move(w);
+        auto mock_writer = std::make_unique<MockLogWriter>();
+        writer_ptr_ = mock_writer.get();
+        writer_ = std::move(mock_writer);
     }
 
     std::unique_ptr<Logger> make_logger(LogLevel level = LogLevel::INFO) {
-        auto w = std::unique_ptr<ILogWriter>(writer_.release());
-        auto logger = std::make_unique<Logger>(std::move(ring_), std::move(w), level);
+        auto writer = std::unique_ptr<ILogWriter>(writer_.release());
+        auto logger = std::make_unique<Logger>(std::move(ring_), std::move(writer), level);
         return logger;
     }
 };
@@ -44,7 +43,7 @@ protected:
 // log() returns success for messages at or above the minimum level
 TEST_F(LoggerTest, LogAtMinimumLevelReturnsSuccess) {
     // Given
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(1));
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(testing::AtLeast(1));
     auto logger = make_logger(LogLevel::INFO);
 
     // When
@@ -60,7 +59,7 @@ TEST_F(LoggerTest, LogAtMinimumLevelReturnsSuccess) {
 TEST_F(LoggerTest, LogBelowMinimumLevelIsFiltered) {
     // Given
     auto logger = make_logger(LogLevel::WARN);
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(0);
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(0);
 
     // When
     auto result = logger->log(LogLevel::DEBUG, "filtered", {"test.cpp", 1, "func"});
@@ -74,7 +73,7 @@ TEST_F(LoggerTest, LogBelowMinimumLevelIsFiltered) {
 // log() returns ALREADY_SHUTDOWN when called after shutdown()
 TEST_F(LoggerTest, LogAfterShutdownReturnsAlreadyShutdown) {
     // Given
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(0));
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(testing::AtLeast(0));
     auto logger = make_logger(LogLevel::INFO);
     logger->shutdown();
 
@@ -89,7 +88,7 @@ TEST_F(LoggerTest, LogAfterShutdownReturnsAlreadyShutdown) {
 // shutdown() is idempotent — calling it twice does not crash
 TEST_F(LoggerTest, ShutdownIsIdempotent) {
     // Given
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(0));
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(testing::AtLeast(0));
     auto logger = make_logger(LogLevel::INFO);
     logger->shutdown();
 
@@ -101,7 +100,7 @@ TEST_F(LoggerTest, ShutdownIsIdempotent) {
 TEST_F(LoggerTest, SetLevelChangesFiltering) {
     // Given
     auto logger = make_logger(LogLevel::INFO);
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(1));
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(testing::AtLeast(1));
 
     // When — raise the level to WARN
     logger->set_level(LogLevel::WARN);
@@ -122,12 +121,12 @@ TEST_F(LoggerTest, SetLevelChangesFiltering) {
 // set_writer() switches the writer and subsequent writes go to the new writer
 TEST_F(LoggerTest, SetWriterSwitchesOutput) {
     // Given
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(0));
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(testing::AtLeast(0));
     auto logger = make_logger(LogLevel::INFO);
 
     auto new_writer = std::make_unique<MockLogWriter>();
     auto* new_writer_ptr = new_writer.get();
-    EXPECT_CALL(*new_writer_ptr, write(_)).Times(testing::AtLeast(1));
+    EXPECT_CALL(*new_writer_ptr, write(::testing::_)).Times(testing::AtLeast(1));
 
     // When
     logger->set_writer(std::unique_ptr<ILogWriter>(new_writer.release()));
@@ -142,7 +141,7 @@ TEST_F(LoggerTest, SetWriterSwitchesOutput) {
 // write errors are tracked in the error counter
 TEST_F(LoggerTest, WriteErrorsAreCounted) {
     // Given
-    EXPECT_CALL(*writer_ptr_, write(_))
+    EXPECT_CALL(*writer_ptr_, write(::testing::_))
         .Times(testing::AtLeast(1))
         .WillRepeatedly(Return(std::unexpected(WriteError::WRITE_FAILED)));
     auto logger = make_logger(LogLevel::INFO);
@@ -152,7 +151,7 @@ TEST_F(LoggerTest, WriteErrorsAreCounted) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     // Then
-    EXPECT_GT(logger->write_error_count(), 0u);
+    EXPECT_GT(logger->write_error_count(), 0U);
 
     logger->shutdown();
 }
@@ -161,7 +160,7 @@ TEST_F(LoggerTest, WriteErrorsAreCounted) {
 TEST_F(LoggerTest, FormattedOutputContainsExpectedFields) {
     // Given
     std::string captured;
-    EXPECT_CALL(*writer_ptr_, write(_))
+    EXPECT_CALL(*writer_ptr_, write(::testing::_))
         .Times(testing::AtLeast(1))
         .WillRepeatedly(
             Invoke([&captured](std::string_view msg) -> std::expected<void, WriteError> {
@@ -186,7 +185,7 @@ TEST_F(LoggerTest, FormattedOutputContainsExpectedFields) {
 TEST_F(LoggerTest, DrainsRemainingEntriesOnShutdown) {
     // Given
     std::atomic<int> write_count{0};
-    EXPECT_CALL(*writer_ptr_, write(_))
+    EXPECT_CALL(*writer_ptr_, write(::testing::_))
         .Times(testing::AtLeast(3))
         .WillRepeatedly(Invoke([&write_count](std::string_view) -> std::expected<void, WriteError> {
             write_count.fetch_add(1, std::memory_order_relaxed);
@@ -208,7 +207,7 @@ TEST_F(LoggerTest, DrainsRemainingEntriesOnShutdown) {
 TEST_F(LoggerTest, MultiThreadedLogging) {
     // Given
     std::atomic<int> write_count{0};
-    EXPECT_CALL(*writer_ptr_, write(_))
+    EXPECT_CALL(*writer_ptr_, write(::testing::_))
         .Times(testing::AtLeast(40))
         .WillRepeatedly(Invoke([&write_count](std::string_view) -> std::expected<void, WriteError> {
             write_count.fetch_add(1, std::memory_order_relaxed);
@@ -239,7 +238,7 @@ TEST_F(LoggerTest, MultiThreadedLogging) {
 // format_entry truncates when the combined fields exceed the 512-byte buffer
 TEST_F(LoggerTest, FormatTruncatesOnOverflow) {
     // Given
-    EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(1));
+    EXPECT_CALL(*writer_ptr_, write(::testing::_)).Times(testing::AtLeast(1));
     auto logger = make_logger(LogLevel::INFO);
 
     std::string long_file(300, 'f');
@@ -259,7 +258,7 @@ TEST_F(LoggerTest, FormatTruncatesOnOverflow) {
 TEST_F(LoggerTest, DrainHandlesWriteErrors) {
     // Given
     std::atomic<int> call_count{0};
-    EXPECT_CALL(*writer_ptr_, write(_))
+    EXPECT_CALL(*writer_ptr_, write(::testing::_))
         .Times(testing::AtLeast(3))
         .WillRepeatedly(Invoke([&call_count](std::string_view) -> std::expected<void, WriteError> {
             if (call_count.fetch_add(1) < 3) {
@@ -276,5 +275,5 @@ TEST_F(LoggerTest, DrainHandlesWriteErrors) {
     logger->shutdown();
 
     // Then
-    EXPECT_GE(logger->write_error_count(), 3u);
+    EXPECT_GE(logger->write_error_count(), 3U);
 }

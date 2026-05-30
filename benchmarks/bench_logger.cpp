@@ -31,9 +31,9 @@ static void BM_LoggerSingleThread(benchmark::State& state) {
     auto writer = std::make_unique<NullWriter>();
     Logger logger{std::move(ring), std::move(writer), LogLevel::TRACE};
 
-    SourceLoc loc{"bench.cpp", 1, "benchmark"};
+    SourceLoc loc{.file_ = "bench.cpp", .line_ = 1, .function_ = "benchmark"};
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         auto result = logger.log(LogLevel::INFO, "benchmark message", loc);
         benchmark::DoNotOptimize(result);
     }
@@ -48,28 +48,29 @@ static void BM_LoggerMultiThread(benchmark::State& state) {
     auto writer = std::make_unique<NullWriter>();
     Logger logger{std::move(ring), std::move(writer), LogLevel::TRACE};
 
-    SourceLoc loc{"bench.cpp", 1, "benchmark"};
+    SourceLoc loc{.file_ = "bench.cpp", .line_ = 1, .function_ = "benchmark"};
     std::atomic<std::size_t> total_messages{0};
 
-    const int num_threads = state.range(0);
+    const int num_threads = static_cast<int>(state.range(0));
     const int messages_per_thread = 10000;
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         std::vector<std::jthread> threads;
-        threads.reserve(num_threads);
+        threads.reserve(static_cast<std::size_t>(num_threads));
 
-        for (int t = 0; t < num_threads; ++t) {
+        for (int thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
             threads.emplace_back([&logger, &loc, messages_per_thread, &total_messages] {
-                for (int i = 0; i < messages_per_thread; ++i) {
+                for (int msg_idx = 0; msg_idx < messages_per_thread; ++msg_idx) {
                     auto result = logger.log(LogLevel::INFO, "benchmark message", loc);
                     benchmark::DoNotOptimize(result);
                 }
-                total_messages.fetch_add(messages_per_thread, std::memory_order_relaxed);
+                total_messages.fetch_add(static_cast<std::size_t>(messages_per_thread),
+                    std::memory_order_relaxed);
             });
         }
 
-        for (auto& t : threads) {
-            t.join();
+        for (auto& thread : threads) {
+            thread.join();
         }
     }
 
@@ -84,9 +85,9 @@ static void BM_LoggerFiltered(benchmark::State& state) {
     auto writer = std::make_unique<NullWriter>();
     Logger logger{std::move(ring), std::move(writer), LogLevel::ERROR};
 
-    SourceLoc loc{"bench.cpp", 1, "benchmark"};
+    SourceLoc loc{.file_ = "bench.cpp", .line_ = 1, .function_ = "benchmark"};
 
-    for (auto _ : state) {
+    for (auto benchmark_iter : state) {
         auto result = logger.log(LogLevel::INFO, "filtered message", loc);
         benchmark::DoNotOptimize(result);
     }

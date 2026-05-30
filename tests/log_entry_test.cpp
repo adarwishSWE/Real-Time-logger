@@ -1,49 +1,50 @@
 // Component under test: LogEntry and SourceLoc
-// Covers: aggregate construction, field access, default construction
+// Covers: default construction, aggregate initialization, field access
 
 #include <rt-logger/log_entry.h>
 
 #include <gtest/gtest.h>
-#include <chrono>
 
 using namespace rtlog;
 
 class LogEntryTest : public ::testing::Test {};
 class SourceLocTest : public ::testing::Test {};
 
-// value-initialized LogEntry has zeroed members
+// Default-constructed LogEntry has zero-initialized fields
 TEST_F(LogEntryTest, DefaultConstruction) {
-    // Given
+    // Given / When
     LogEntry entry{};
 
-    // When / Then
-    EXPECT_EQ(entry.level, LogLevel::TRACE);
-    EXPECT_EQ(entry.message[0], '\0');
+    // Then
+    EXPECT_EQ(entry.level_, LogLevel{});
+    EXPECT_EQ(entry.message_[0], '\0');
 }
 
-// aggregate-initialized LogEntry preserves all fields
+// LogEntry supports aggregate initialization of all fields
 TEST_F(LogEntryTest, AggregateInitialization) {
     // Given
-    auto now = std::chrono::system_clock::now();
+    const auto now = std::chrono::system_clock::now();
 
     // When
-    LogEntry entry{now, LogLevel::ERROR, {"main.cpp", 42, "foo"}, {}};
+    LogEntry entry{.timestamp_ = now,
+        .level_ = LogLevel::ERROR,
+        .source_loc_ = {.file_ = "main.cpp", .line_ = 42, .function_ = "foo"}};
 
     // Then
-    EXPECT_EQ(entry.timestamp, now);
-    EXPECT_EQ(entry.level, LogLevel::ERROR);
-    EXPECT_STREQ(entry.source_loc.file, "main.cpp");
-    EXPECT_EQ(entry.source_loc.line, 42);
-    EXPECT_STREQ(entry.source_loc.function, "foo");
+    EXPECT_EQ(entry.timestamp_, now);
+    EXPECT_EQ(entry.level_, LogLevel::ERROR);
+    EXPECT_STREQ(entry.source_loc_.file_, "main.cpp");
+    EXPECT_EQ(entry.source_loc_.line_, 42);
+    EXPECT_STREQ(entry.source_loc_.function_, "foo");
 }
 
 // SourceLoc fields are correctly aggregate-initialized
 TEST_F(SourceLocTest, Fields) {
-    // Given
-    SourceLoc loc{"test.cpp", 10, "bar"};
+    // Given / When
+    SourceLoc loc{.file_ = "test.cpp", .line_ = 10, .function_ = "bar"};
 
-    // When / Then
-    EXPECT_STREQ(loc.file, "test.cpp");
-    EXPECT_EQ(loc.line, 10);
-    EXPECT_STREQ(loc.function, "bar");
+    // Then
+    EXPECT_STREQ(loc.file_, "test.cpp");
+    EXPECT_EQ(loc.line_, 10);
+    EXPECT_STREQ(loc.function_, "bar");
 }
