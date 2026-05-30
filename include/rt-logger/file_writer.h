@@ -24,14 +24,14 @@ public:
      * @param filepath Path to the log file (opened in append mode).
      * @return Ownership of an ILogWriter, or nullptr if the file cannot be opened.
      */
-    [[nodiscard]] static std::unique_ptr<ILogWriter> create(std::string_view filepath);
+    static std::unique_ptr<ILogWriter> create(std::string_view filepath);
 
-    FileWriter()                             = default;
-    ~FileWriter() override                   = default;
-    FileWriter(const FileWriter&)            = delete;
+    FileWriter() = default;
+    ~FileWriter() override = default;
+    FileWriter(const FileWriter&) = delete;
     FileWriter& operator=(const FileWriter&) = delete;
-    FileWriter(FileWriter&&)                 = delete;
-    FileWriter& operator=(FileWriter&&)      = delete;
+    FileWriter(FileWriter&&) = delete;
+    FileWriter& operator=(FileWriter&&) = delete;
 
     /**
      * @brief Construct with an externally-owned stream (for testing).
@@ -51,11 +51,11 @@ public:
      * @param message The formatted log line.
      * @return Success, or WriteError::WRITE_FAILED if the stream is in a bad state.
      */
-    [[nodiscard]] std::expected<void, WriteError> write(std::string_view message) noexcept override;
+    std::expected<void, WriteError> write(std::string_view message) noexcept override;
 
 private:
     std::ofstream owned_stream_;
     std::ostream* stream_{nullptr};
 };
 
-}  // namespace rtlog
+} // namespace rtlog

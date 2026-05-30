@@ -14,7 +14,7 @@ using namespace rtlog;
 LogEntry make_entry(int line = 0, LogLevel level = LogLevel::INFO) {
     LogEntry e{};
     e.source_loc.line = line;
-    e.level           = level;
+    e.level = level;
     return e;
 }
 
@@ -85,9 +85,9 @@ TEST_F(MpscRingTest, FifoOrdering) {
 // multiple producers can push concurrently without data loss
 TEST_F(MpscRingTest, MultiProducerContention) {
     // Given
-    constexpr int kNumProducers     = 4;
+    constexpr int kNumProducers = 4;
     constexpr int kItemsPerProducer = 100;
-    constexpr int kTotalItems       = kNumProducers * kItemsPerProducer;
+    constexpr int kTotalItems = kNumProducers * kItemsPerProducer;
     MpscRing<256> ring;
 
     // When
@@ -95,7 +95,7 @@ TEST_F(MpscRingTest, MultiProducerContention) {
     for (int t = 0; t < kNumProducers; ++t) {
         producers.emplace_back([&ring, t] {
             for (int i = 0; i < kItemsPerProducer; ++i) {
-                auto entry            = make_entry(t);
+                auto entry = make_entry(t);
                 entry.source_loc.file = reinterpret_cast<const char*>(static_cast<uintptr_t>(i));
 
                 while (true) {

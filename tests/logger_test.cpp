@@ -28,14 +28,14 @@ protected:
     MockLogWriter* writer_ptr_;
 
     void SetUp() override {
-        ring_       = std::make_unique<MpscRing<64>>();
-        auto w      = std::make_unique<MockLogWriter>();
+        ring_ = std::make_unique<MpscRing<64>>();
+        auto w = std::make_unique<MockLogWriter>();
         writer_ptr_ = w.get();
-        writer_     = std::move(w);
+        writer_ = std::move(w);
     }
 
     std::unique_ptr<Logger> make_logger(LogLevel level = LogLevel::INFO) {
-        auto w      = std::unique_ptr<ILogWriter>(writer_.release());
+        auto w = std::unique_ptr<ILogWriter>(writer_.release());
         auto logger = std::make_unique<Logger>(std::move(ring_), std::move(w), level);
         return logger;
     }
@@ -123,9 +123,9 @@ TEST_F(LoggerTest, SetLevelChangesFiltering) {
 TEST_F(LoggerTest, SetWriterSwitchesOutput) {
     // Given
     EXPECT_CALL(*writer_ptr_, write(_)).Times(testing::AtLeast(0));
-    auto logger          = make_logger(LogLevel::INFO);
+    auto logger = make_logger(LogLevel::INFO);
 
-    auto new_writer      = std::make_unique<MockLogWriter>();
+    auto new_writer = std::make_unique<MockLogWriter>();
     auto* new_writer_ptr = new_writer.get();
     EXPECT_CALL(*new_writer_ptr, write(_)).Times(testing::AtLeast(1));
 

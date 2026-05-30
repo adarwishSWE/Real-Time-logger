@@ -22,4 +22,4 @@ struct LogEntry {
     std::array<char, 256> message;
 };
 
-}  // namespace rtlog
+} // namespace rtlog

@@ -15,4 +15,4 @@ std::expected<void, WriteError> ConsoleWriter::write(std::string_view message) n
     return {};
 }
 
-}  // namespace rtlog
+} // namespace rtlog

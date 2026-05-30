@@ -27,4 +27,4 @@ std::expected<void, WriteError> FileWriter::write(std::string_view message) noex
     return {};
 }
 
-}  // namespace rtlog
+} // namespace rtlog

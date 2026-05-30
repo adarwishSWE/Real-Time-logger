@@ -15,21 +15,19 @@ namespace rtlog {
  */
 class NullWriter : public ILogWriter {
 public:
-    NullWriter()                             = default;
-    ~NullWriter() override                   = default;
-    NullWriter(const NullWriter&)            = delete;
+    NullWriter() = default;
+    ~NullWriter() override = default;
+    NullWriter(const NullWriter&) = delete;
     NullWriter& operator=(const NullWriter&) = delete;
-    NullWriter(NullWriter&&)                 = delete;
-    NullWriter& operator=(NullWriter&&)      = delete;
+    NullWriter(NullWriter&&) = delete;
+    NullWriter& operator=(NullWriter&&) = delete;
 
-    [[nodiscard]] std::expected<void, WriteError> write(std::string_view) noexcept override {
-        return {};
-    }
+    std::expected<void, WriteError> write(std::string_view) noexcept override { return {}; }
 };
 
 // Measures end-to-end single-threaded log() call (timestamp + format + ring push + bg thread drain).
 static void BM_LoggerSingleThread(benchmark::State& state) {
-    auto ring   = std::make_unique<MpscRing<1024>>();
+    auto ring = std::make_unique<MpscRing<1024>>();
     auto writer = std::make_unique<NullWriter>();
     Logger logger{std::move(ring), std::move(writer), LogLevel::TRACE};
 
@@ -46,14 +44,14 @@ BENCHMARK(BM_LoggerSingleThread);
 
 // Measures multi-threaded throughput: N threads each fire 10k logs; reports total items/sec.
 static void BM_LoggerMultiThread(benchmark::State& state) {
-    auto ring   = std::make_unique<MpscRing<4096>>();
+    auto ring = std::make_unique<MpscRing<4096>>();
     auto writer = std::make_unique<NullWriter>();
     Logger logger{std::move(ring), std::move(writer), LogLevel::TRACE};
 
     SourceLoc loc{"bench.cpp", 1, "benchmark"};
     std::atomic<std::size_t> total_messages{0};
 
-    const int num_threads         = state.range(0);
+    const int num_threads = state.range(0);
     const int messages_per_thread = 10000;
 
     for (auto _ : state) {
@@ -82,7 +80,7 @@ BENCHMARK(BM_LoggerMultiThread)->Arg(2)->Arg(4)->Arg(8);
 
 // Measures the cost of a log() call that is rejected by the level filter (no ring interaction).
 static void BM_LoggerFiltered(benchmark::State& state) {
-    auto ring   = std::make_unique<MpscRing<1024>>();
+    auto ring = std::make_unique<MpscRing<1024>>();
     auto writer = std::make_unique<NullWriter>();
     Logger logger{std::move(ring), std::move(writer), LogLevel::ERROR};
 
@@ -97,4 +95,4 @@ static void BM_LoggerFiltered(benchmark::State& state) {
 }
 BENCHMARK(BM_LoggerFiltered);
 
-}  // namespace rtlog
+} // namespace rtlog

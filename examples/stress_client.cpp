@@ -19,15 +19,15 @@
 #include <vector>
 
 int main() {
-    constexpr int num_threads           = 4;
-    constexpr int messages_per_thread   = 250'000;
-    constexpr int ring_size             = 4096;
+    constexpr int num_threads = 4;
+    constexpr int messages_per_thread = 250'000;
+    constexpr int ring_size = 4096;
     constexpr rtlog::LogLevel min_level = rtlog::LogLevel::INFO;
 
-    const std::string log_file          = "stress_client.log";
+    const std::string log_file = "stress_client.log";
 
-    auto ring                           = std::make_unique<rtlog::MpscRing<ring_size>>();
-    auto writer_or_err                  = rtlog::FileWriter::create(log_file);
+    auto ring = std::make_unique<rtlog::MpscRing<ring_size>>();
+    auto writer_or_err = rtlog::FileWriter::create(log_file);
     if (!writer_or_err) {
         std::cerr << "Failed to create log file: " << log_file << "\n";
         return EXIT_FAILURE;
@@ -59,13 +59,13 @@ int main() {
 
     logger.shutdown();
 
-    const auto end      = std::chrono::steady_clock::now();
-    const auto elapsed  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    const auto end = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     const auto total_ms = elapsed.count();
     const std::size_t total_messages = static_cast<std::size_t>(num_threads) * messages_per_thread;
 
-    double seconds                   = total_ms > 0 ? total_ms / 1000.0 : 1.0;
-    double throughput                = static_cast<double>(total_messages) / seconds;
+    double seconds = total_ms > 0 ? total_ms / 1000.0 : 1.0;
+    double throughput = static_cast<double>(total_messages) / seconds;
 
     std::cout << "Elapsed:  " << total_ms << " ms\n";
     std::cout << "Messages: " << total_messages << "\n";

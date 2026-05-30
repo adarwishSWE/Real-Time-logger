@@ -28,7 +28,7 @@ int main() {
     writers.push_back(std::move(file_writer_or_err));
 
     auto broadcast = std::make_unique<rtlog::BroadcastWriter>(std::move(writers));
-    auto ring      = std::make_unique<rtlog::MpscRing<64>>();
+    auto ring = std::make_unique<rtlog::MpscRing<64>>();
     rtlog::Logger logger{std::move(ring), std::move(broadcast), rtlog::LogLevel::INFO};
 
     std::cout << "=== BroadcastWriter: fanning out to ConsoleWriter + FileWriter ===\n";

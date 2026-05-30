@@ -13,7 +13,7 @@
 #include <iostream>
 
 int main() {
-    auto ring   = std::make_unique<rtlog::MpscRing<64>>();
+    auto ring = std::make_unique<rtlog::MpscRing<64>>();
     auto writer = std::make_unique<rtlog::ConsoleWriter>();
     rtlog::Logger logger{std::move(ring), std::move(writer), rtlog::LogLevel::INFO};
 

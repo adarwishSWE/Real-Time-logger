@@ -14,7 +14,7 @@ enum class LogLevel {
     FATAL,
 };
 
-[[nodiscard]] constexpr std::string_view to_string(LogLevel level) noexcept {
+constexpr std::string_view to_string(LogLevel level) noexcept {
     switch (level) {
     case LogLevel::TRACE:
         return "TRACE";
@@ -36,4 +36,4 @@ inline std::ostream& operator<<(std::ostream& os, LogLevel level) noexcept {
     return os << to_string(level);
 }
 
-}  // namespace rtlog
+} // namespace rtlog

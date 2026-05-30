@@ -15,12 +15,12 @@ namespace rtlog {
  */
 class ConsoleWriter : public ILogWriter {
 public:
-    ConsoleWriter()                                = default;
-    ~ConsoleWriter() override                      = default;
-    ConsoleWriter(const ConsoleWriter&)            = delete;
+    ConsoleWriter() = default;
+    ~ConsoleWriter() override = default;
+    ConsoleWriter(const ConsoleWriter&) = delete;
     ConsoleWriter& operator=(const ConsoleWriter&) = delete;
-    ConsoleWriter(ConsoleWriter&&)                 = delete;
-    ConsoleWriter& operator=(ConsoleWriter&&)      = delete;
+    ConsoleWriter(ConsoleWriter&&) = delete;
+    ConsoleWriter& operator=(ConsoleWriter&&) = delete;
 
     /**
      * @brief Write a formatted log line to stdout, followed by a newline.
@@ -28,7 +28,7 @@ public:
      * @param message The formatted log line.
      * @return Success, or WriteError::WRITE_FAILED if the stream is in a bad state.
      */
-    [[nodiscard]] std::expected<void, WriteError> write(std::string_view message) noexcept override;
+    std::expected<void, WriteError> write(std::string_view message) noexcept override;
 };
 
-}  // namespace rtlog
+} // namespace rtlog

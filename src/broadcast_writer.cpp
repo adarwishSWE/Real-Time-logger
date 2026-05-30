@@ -15,4 +15,4 @@ std::expected<void, WriteError> BroadcastWriter::write(std::string_view message)
     return {};
 }
 
-}  // namespace rtlog
+} // namespace rtlog

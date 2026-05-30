@@ -44,19 +44,18 @@ public:
      * @param writer  Ownership of the initial output writer.
      * @param level   Minimum log level (messages below this are discarded).
      */
-    Logger(std::unique_ptr<IRing> ring,
-           std::unique_ptr<ILogWriter> writer,
-           LogLevel level = LogLevel::INFO);
+    Logger(std::unique_ptr<IRing> ring, std::unique_ptr<ILogWriter> writer,
+        LogLevel level = LogLevel::INFO);
 
     /**
      * @brief Destructor. Calls shutdown() if not already called.
      */
     ~Logger() override;
 
-    Logger(const Logger&)            = delete;
+    Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
-    Logger(Logger&&)                 = delete;
-    Logger& operator=(Logger&&)      = delete;
+    Logger(Logger&&) = delete;
+    Logger& operator=(Logger&&) = delete;
 
     /**
      * @brief Submit a log entry. Thread-safe.
@@ -69,8 +68,8 @@ public:
      * @param source_loc Source location (file, line, function).
      * @return Success, or LoggerError::ALREADY_SHUTDOWN.
      */
-    std::expected<void, LoggerError>
-    log(LogLevel level, std::string_view message, const SourceLoc& source_loc) noexcept override;
+    std::expected<void, LoggerError> log(LogLevel level, std::string_view message,
+        const SourceLoc& source_loc) noexcept override;
 
     /**
      * @brief Change the minimum log level. Thread-safe.
@@ -104,7 +103,7 @@ public:
      *
      * @return The cumulative write error count.
      */
-    [[nodiscard]] std::size_t write_error_count() const noexcept;
+    std::size_t write_error_count() const noexcept;
 
 private:
     std::unique_ptr<IRing> ring_;
@@ -119,4 +118,4 @@ private:
     void run(std::stop_token st);
 };
 
-}  // namespace rtlog
+} // namespace rtlog

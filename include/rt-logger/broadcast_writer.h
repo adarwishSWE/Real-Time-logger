@@ -22,11 +22,11 @@ public:
      */
     explicit BroadcastWriter(std::vector<std::unique_ptr<ILogWriter>> writers);
 
-    ~BroadcastWriter() override                        = default;
-    BroadcastWriter(const BroadcastWriter&)            = delete;
+    ~BroadcastWriter() override = default;
+    BroadcastWriter(const BroadcastWriter&) = delete;
     BroadcastWriter& operator=(const BroadcastWriter&) = delete;
-    BroadcastWriter(BroadcastWriter&&)                 = delete;
-    BroadcastWriter& operator=(BroadcastWriter&&)      = delete;
+    BroadcastWriter(BroadcastWriter&&) = delete;
+    BroadcastWriter& operator=(BroadcastWriter&&) = delete;
 
     /**
      * @brief Write the message to every writer in order.
@@ -37,10 +37,10 @@ public:
      * @param message The formatted log line.
      * @return Success, or the first WriteError encountered.
      */
-    [[nodiscard]] std::expected<void, WriteError> write(std::string_view message) noexcept override;
+    std::expected<void, WriteError> write(std::string_view message) noexcept override;
 
 private:
     std::vector<std::unique_ptr<ILogWriter>> writers_;
 };
 
-}  // namespace rtlog
+} // namespace rtlog

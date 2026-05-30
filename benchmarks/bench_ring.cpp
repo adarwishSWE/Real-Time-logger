@@ -12,8 +12,8 @@ namespace rtlog {
 
 static LogEntry make_bench_entry() {
     LogEntry entry{};
-    entry.timestamp  = std::chrono::system_clock::now();
-    entry.level      = LogLevel::INFO;
+    entry.timestamp = std::chrono::system_clock::now();
+    entry.level = LogLevel::INFO;
     entry.source_loc = {"bench.cpp", 1, "bench"};
     std::memcpy(entry.message.data(), "benchmark", 10);
     return entry;
@@ -91,4 +91,4 @@ static void BM_RingPushBlocking(benchmark::State& state) {
 }
 BENCHMARK(BM_RingPushBlocking);
 
-}  // namespace rtlog
+} // namespace rtlog

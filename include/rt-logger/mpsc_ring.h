@@ -49,10 +49,10 @@ public:
         }
     }
 
-    MpscRing(const MpscRing&)            = delete;
+    MpscRing(const MpscRing&) = delete;
     MpscRing& operator=(const MpscRing&) = delete;
-    MpscRing(MpscRing&&)                 = delete;
-    MpscRing& operator=(MpscRing&&)      = delete;
+    MpscRing(MpscRing&&) = delete;
+    MpscRing& operator=(MpscRing&&) = delete;
 
     /**
      * @brief Attempt to push an entry without blocking. Thread-safe.
@@ -62,21 +62,21 @@ public:
      * @param entry The log entry to enqueue.
      * @return Success, or RingError::FULL/RingError::SHUTDOWN.
      */
-    [[nodiscard]] std::expected<void, RingError> try_push(const LogEntry& entry) noexcept override {
+    std::expected<void, RingError> try_push(const LogEntry& entry) noexcept override {
         if (shutdown_.load(std::memory_order_acquire)) {
             return std::unexpected(RingError::SHUTDOWN);
         }
 
         std::size_t pos = write_pos_.load(std::memory_order_relaxed);
 
-        while (true) {  // LCOV_EXCL_LINE — gcov quirk: infinite-loop condition has no false branch
+        while (true) { // LCOV_EXCL_LINE — gcov quirk: infinite-loop condition has no false branch
             const auto read_pos = read_pos_.load(std::memory_order_acquire);
             if (pos - read_pos >= ring_size) {
                 return std::unexpected(RingError::FULL);
             }
 
-            const auto index      = pos & mask;
-            auto& slot            = buffer_[index];
+            const auto index = pos & mask;
+            auto& slot = buffer_[index];
             const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
 
             if (seq != pos) {
@@ -91,8 +91,10 @@ public:
                 // LCOV_EXCL_STOP
             }
 
-            if (write_pos_.compare_exchange_weak(pos, pos + 1, std::memory_order_acquire,
-                                                 std::memory_order_relaxed)) {
+            if (write_pos_.compare_exchange_weak(pos,
+                    pos + 1,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 slot.data = entry;
                 slot.sequence.store(pos + 1, std::memory_order_release);
                 return {};
@@ -105,10 +107,10 @@ public:
      *
      * @return The popped LogEntry, or std::nullopt if empty.
      */
-    [[nodiscard]] std::optional<LogEntry> try_pop() noexcept override {
-        const auto pos        = read_pos_.load(std::memory_order_relaxed);
-        const auto index      = pos & mask;
-        auto& slot            = buffer_[index];
+    std::optional<LogEntry> try_pop() noexcept override {
+        const auto pos = read_pos_.load(std::memory_order_relaxed);
+        const auto index = pos & mask;
+        auto& slot = buffer_[index];
 
         const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
         if (seq != pos + 1) {
@@ -133,7 +135,7 @@ public:
      * @param entry The log entry to enqueue.
      * @return Success, or RingError::SHUTDOWN.
      */
-    [[nodiscard]] std::expected<void, RingError> push(const LogEntry& entry) override {
+    std::expected<void, RingError> push(const LogEntry& entry) override {
         std::unique_lock lock(push_mutex_);
 
         while (true) {
@@ -160,8 +162,8 @@ public:
                     return std::unexpected(RingError::SHUTDOWN);
                 }
             } else {
-                return result;  // LCOV_EXCL_LINE — race: try_push returns SHUTDOWN (not FULL)
-                                // between push's shutdown check and try_push call
+                return result; // LCOV_EXCL_LINE — race: try_push returns SHUTDOWN (not FULL)
+                               // between push's shutdown check and try_push call
             }
         }
     }
@@ -179,4 +181,4 @@ public:
     }
 };
 
-}  // namespace rtlog
+} // namespace rtlog

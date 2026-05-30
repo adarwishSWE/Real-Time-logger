@@ -19,10 +19,10 @@ public:
     // LCOV_EXCL_START — deleting destructor of abstract class is structurally unreachable
     virtual ~ILogWriter() = default;
     // LCOV_EXCL_STOP
-    ILogWriter(const ILogWriter&)            = delete;
+    ILogWriter(const ILogWriter&) = delete;
     ILogWriter& operator=(const ILogWriter&) = delete;
-    ILogWriter(ILogWriter&&)                 = delete;
-    ILogWriter& operator=(ILogWriter&&)      = delete;
+    ILogWriter(ILogWriter&&) = delete;
+    ILogWriter& operator=(ILogWriter&&) = delete;
 
     /**
      * @brief Write a formatted log line to the output destination.
@@ -30,11 +30,10 @@ public:
      * @param message The fully formatted log line (including newline).
      * @return Success, or a WriteError on failure.
      */
-    [[nodiscard]] virtual std::expected<void, WriteError>
-    write(std::string_view message) noexcept = 0;
+    virtual std::expected<void, WriteError> write(std::string_view message) noexcept = 0;
 
 protected:
     ILogWriter() = default;
 };
 
-}  // namespace rtlog
+} // namespace rtlog

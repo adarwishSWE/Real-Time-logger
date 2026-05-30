@@ -23,10 +23,10 @@ public:
     // LCOV_EXCL_START — deleting destructor of abstract class is structurally unreachable
     virtual ~ILogger() = default;
     // LCOV_EXCL_STOP
-    ILogger(const ILogger&)            = delete;
+    ILogger(const ILogger&) = delete;
     ILogger& operator=(const ILogger&) = delete;
-    ILogger(ILogger&&)                 = delete;
-    ILogger& operator=(ILogger&&)      = delete;
+    ILogger(ILogger&&) = delete;
+    ILogger& operator=(ILogger&&) = delete;
 
     /**
      * @brief Submit a log entry to the logger.
@@ -40,8 +40,8 @@ public:
      * @param source_loc Source location (file, line, function).
      * @return Success, or LoggerError::ALREADY_SHUTDOWN if the logger is shut down.
      */
-    virtual std::expected<void, LoggerError>
-    log(LogLevel level, std::string_view message, const SourceLoc& source_loc) noexcept = 0;
+    virtual std::expected<void, LoggerError> log(LogLevel level, std::string_view message,
+        const SourceLoc& source_loc) noexcept = 0;
 
     /**
      * @brief Change the minimum log level at runtime.
@@ -75,4 +75,4 @@ public:
     virtual void shutdown() noexcept = 0;
 };
 
-}  // namespace rtlog
+} // namespace rtlog
