@@ -44,12 +44,15 @@ Producer Threads (real-time)          Consumer Thread (background)
 
 | Feature | Why It Matters |
 |---------|---------------|
-| **CAS-based MPSC ring** | Fast-path enqueue via atomic compare-and-swap when ring has space |
+| **CAS-based MPSC ring** | Per-slot sequence counters let multiple producers reserve slots concurrently without a producer-side mutex |
+| **Cache-line aligned slots and indices** | `write_pos_`, `read_pos_`, and each `Slot` sit on their own cache line — no false sharing between producers and the consumer |
 | **Zero-allocation hot path** | `LogEntry` is a fixed-size POD — no heap, no fragmentation |
 | **`std::expected` error handling** | No exceptions — suitable for `-fno-exceptions` embedded builds |
+| **Compile-time capacity validation** | `static_assert` requires the ring size to be a positive power of two (`is_valid_mpsc_ring_size<N>`) |
 | **Background consumer thread** | Producers never wait for disk, network, or terminal I/O |
 | **Runtime level filtering** | Change minimum log level on the fly via `set_level()` |
 | **Pluggable writers** | `ConsoleWriter`, `FileWriter`, `BroadcastWriter` — or implement `ILogWriter` |
+| **Race-free blocking push and shutdown** | Producer wakeups are issued under `push_mutex_`, so notifications cannot be lost against a waiter mid-registration |
 | **Graceful shutdown** | `shutdown()` drains remaining entries and joins the consumer thread |
 
 ## Prerequisites
@@ -159,36 +162,59 @@ std::size_t write_error_count() const;
 
 ## Architecture
 
+### Component layout
+
 ```
-Producer Threads (any number)
-         │
-         ▼
-┌─────────────────┐
-│   MpscRing<N>   │  ← CAS enqueue (fast path)
-│  (bounded ring) │
-└─────────────────┘
-         │
-         ▼
-Consumer Thread (1)
-    try_pop() → format_entry() → ILogWriter::write()
-         │
-         ▼
-   ConsoleWriter / FileWriter / BroadcastWriter
+   Producer threads (N)            Consumer thread (1)
+   ┌─────────────────┐             ┌──────────────────────────┐
+   │ Logger::log()   │             │ Consumer loop             │
+   │  ├─ filter level│             │  ├─ ring.try_pop()        │
+   │  ├─ build entry │             │  ├─ format_entry()        │
+   │  └─ ring.push() │             │  └─ writer->write(line)   │
+   └────────┬────────┘             └────────────┬─────────────┘
+            │                                   │
+            ▼                                   ▼
+   ┌──────────────────────────────────────────────────────────┐
+   │                       MpscRing<N>                        │
+   │   ┌────────┐  ┌────────┐  ┌────────┐         ┌────────┐  │
+   │   │ Slot 0 │  │ Slot 1 │  │ Slot 2 │   ...   │Slot N-1│  │
+   │   │ seq_   │  │ seq_   │  │ seq_   │         │ seq_   │  │
+   │   │ data_  │  │ data_  │  │ data_  │         │ data_  │  │
+   │   └────────┘  └────────┘  └────────┘         └────────┘  │
+   │  write_pos_ (atomic, separate cache line)                │
+   │  read_pos_  (atomic, separate cache line)                │
+   │  push_mutex_ + push_cv_ (only used when ring is full)    │
+   └──────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+              ConsoleWriter / FileWriter / BroadcastWriter
 ```
 
-> **Bounded blocking:** When the ring is full, producers wait on a condition variable until a slot is freed. The ring size `N` directly caps both memory usage and worst-case producer stall time.
+### MpscRing design
+
+Bounded MPSC ring buffer. Each slot holds a `sequence_` counter: a producer CAS-reserves `write_pos_` then publishes via `sequence_.store(pos + 1, release)`; the single consumer pairs with `sequence_.load(acquire)` and needs no CAS. `write_pos_`, `read_pos_`, and each slot are cache-line aligned.
+
+### Blocking `push()` and shutdown
+
+`try_push()` is lock-free. `push()` only falls back to `push_cv_` on `FULL`. All `notify_*` (from `try_pop` and `shutdown`) happen under `push_mutex_`, closing the lost-wakeup window between a waiter's predicate check and its CV registration.
+
+### Latency knob
+
+Fast path: CAS → copy → release → return (~500 ns). Slow path: wait on `push_cv_` until a pop or shutdown wakes it. Ring size `N` (compile-time, power-of-two) bounds memory and worst-case stall; `capacity()` and `is_shutdown()` are the only observability accessors.
 
 ## Benchmarks
 
 **Latency is the headline metric.** Throughput is intentionally modest because `FileWriter` is synchronous — the point is that the *producer* never waits for I/O, not that the library outperforms dedicated async loggers like `spdlog` (which can do millions of msg/sec with buffered sinks).
 
-Producer-side latency (Debug build, 4.7GHz x86-64):
+Producer-side latency (Debug build, 4.7 GHz x86-64):
 
 | Operation | Latency |
 |-----------|---------|
 | `log()` end-to-end (ring has space) | **~500 ns** |
-| Ring `try_push` (single-threaded CAS) | ~70 ns |
-| Ring `try_push` (contended, 4 threads) | ~18 ns amortized |
+| Ring `try_push` + `try_pop` single-threaded | ~85 ns |
+| Ring `push()` on a non-full ring | ~90 ns |
+| Ring `try_push` (contended, 4 threads, drained) | ~85 ns / op |
+| Ring `push()` with concurrent consumer (mid-size ring) | ~105 ns |
 | Message formatting (`strftime` + `snprintf`) | ~200 ns |
 
 End-to-end throughput (limited by synchronous `FileWriter`, not the ring):
@@ -200,7 +226,7 @@ End-to-end throughput (limited by synchronous `FileWriter`, not the ring):
 
 > **Why the throughput gap?** The ring itself can sustain millions of operations per second — the limit is the *consumer* writing to disk. If you need higher throughput, replace `FileWriter` with a batched or async writer, or use `NullWriter` for in-memory telemetry.
 
-Run the full 14-benchmark suite locally:
+Run the full benchmark suite locally:
 ```bash
 cmake -B build -S . -DCMAKE_CXX_COMPILER=clang++-19
 cmake --build build --target run-benchmarks

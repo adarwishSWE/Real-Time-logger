@@ -14,6 +14,10 @@
 
 namespace rtlog {
 
+/** @brief True when @p N is a valid MpscRing capacity (positive power of two). */
+template <std::size_t ring_size>
+constexpr bool is_valid_mpsc_ring_size = ring_size > 0 && (ring_size & (ring_size - 1)) == 0;
+
 /**
  * @brief Lock-free multi-producer, single-consumer ring buffer.
  *
@@ -22,10 +26,12 @@ namespace rtlog {
  * and blocking push (with condition variable) operations. Shutdown
  * wakes all blocked producers with RingError::SHUTDOWN.
  *
- * @tparam ring_size Number of slots; must be a power of 2.
+ * @tparam ring_size Number of usable slots; must be a positive power of 2.
+ *                   All @p ring_size slots hold data (no deliberately wasted slot).
  */
 template <std::size_t ring_size> class MpscRing : public IRing {
-    static_assert((ring_size & (ring_size - 1)) == 0, "ring_size must be power of 2");
+    static_assert(is_valid_mpsc_ring_size<ring_size>,
+        "ring_size must be a positive power of two");
     static constexpr std::size_t mask = ring_size - 1;
 
     struct alignas(std::hardware_destructive_interference_size) Slot {
@@ -60,10 +66,17 @@ public:
     MpscRing(MpscRing&&) = delete;
     MpscRing& operator=(MpscRing&&) = delete;
 
+    /** @brief Maximum number of entries the ring can hold. */
+    static constexpr std::size_t capacity() noexcept { return ring_size; }
+
+    /** @brief True after shutdown() has been called. */
+    bool is_shutdown() const noexcept { return shutdown_.load(std::memory_order_acquire); }
+
     /**
      * @brief Attempt to push an entry without blocking. Thread-safe.
      *
      * Uses lock-free CAS slot reservation for concurrent producers.
+     * Publication happens via sequence_.store(pos + 1, release) after data_ is written.
      *
      * @param entry The log entry to enqueue.
      * @return Success, or RingError::FULL/RingError::SHUTDOWN.
@@ -85,20 +98,16 @@ public:
             const std::size_t seq = slot.sequence_.load(std::memory_order_acquire);
 
             if (seq != pos) {
-                // LCOV_EXCL_START — race window: another producer reserved slot but hasn't
-                // published sequence; shutdown check during that nanosecond gap is untestable
-                // without instrumenting production code
-                if (shutdown_.load(std::memory_order_acquire)) {
-                    return std::unexpected(RingError::SHUTDOWN);
-                }
                 pos = write_pos_.load(std::memory_order_relaxed);
                 continue;
-                // LCOV_EXCL_STOP
             }
 
+            // CAS reserves the slot index; per-slot sequence_.load(acquire) pairs with
+            // the prior slot lifecycle. Entry visibility is published only via
+            // sequence_.store(..., release).
             if (write_pos_.compare_exchange_weak(pos,
                     pos + 1,
-                    std::memory_order_acquire,
+                    std::memory_order_relaxed,
                     std::memory_order_relaxed)) {
                 slot.data_ = entry;
                 slot.sequence_.store(pos + 1, std::memory_order_release);
@@ -125,7 +134,13 @@ public:
         slot.sequence_.store(pos + ring_size, std::memory_order_release);
         read_pos_.store(pos + 1, std::memory_order_release);
 
-        push_cv_.notify_one();
+        // Notify under push_mutex_ so push() waiters cannot miss a wakeup; done on
+        // every successful pop (not only when was_full) so producers are not left
+        // blocked when occupancy drops without hitting the full threshold exactly.
+        {
+            std::lock_guard lock(push_mutex_);
+            push_cv_.notify_one();
+        }
 
         return entry;
     }
@@ -133,42 +148,36 @@ public:
     /**
      * @brief Push an entry, blocking until space is available. Thread-safe.
      *
-     * Blocks on a condition variable when the ring is full. Returns
-     * RingError::SHUTDOWN immediately if shutdown() has been called.
+     * Attempts try_push() without holding push_mutex_ when space is available.
+     * Blocks on a condition variable only when the ring is full.
      *
      * @param entry The log entry to enqueue.
      * @return Success, or RingError::SHUTDOWN.
      */
     std::expected<void, RingError> push(const LogEntry& entry) override {
-        std::unique_lock lock(push_mutex_);
+        auto result = try_push(entry);
+        if (result.has_value() || result.error() != RingError::FULL) {
+            return result;
+        }
+
+        std::unique_lock lock(push_mutex_, std::defer_lock);
 
         while (true) {
-            if (shutdown_.load(std::memory_order_acquire)) {
-                return std::unexpected(RingError::SHUTDOWN);
-            }
-
-            auto result = try_push(entry);
-            if (result.has_value()) {
+            lock.unlock();
+            result = try_push(entry);
+            if (result.has_value() || result.error() != RingError::FULL) {
                 return result;
             }
+            lock.lock();
 
-            if (result.error() == RingError::FULL) {
-                push_cv_.wait(lock, [this] {
-                    if (shutdown_.load(std::memory_order_acquire)) {
-                        return true;
-                    }
-                    const auto write_snapshot = write_pos_.load(std::memory_order_relaxed);
-                    const auto read_snapshot = read_pos_.load(std::memory_order_acquire);
-                    return write_snapshot - read_snapshot < ring_size;
-                });
-
+            push_cv_.wait(lock, [this] {
                 if (shutdown_.load(std::memory_order_acquire)) {
-                    return std::unexpected(RingError::SHUTDOWN);
+                    return true;
                 }
-            } else {
-                return result; // LCOV_EXCL_LINE — race: try_push returns SHUTDOWN (not FULL)
-                               // between push's shutdown check and try_push call
-            }
+                const auto write_snapshot = write_pos_.load(std::memory_order_relaxed);
+                const auto read_snapshot = read_pos_.load(std::memory_order_acquire);
+                return write_snapshot - read_snapshot < ring_size;
+            });
         }
     }
 
@@ -180,6 +189,7 @@ public:
      * try_pop() continues to drain remaining entries.
      */
     void shutdown() noexcept override {
+        std::lock_guard lock(push_mutex_);
         shutdown_.store(true, std::memory_order_release);
         push_cv_.notify_all();
     }
